@@ -9,7 +9,7 @@ hosted providers that implement it, can steer it alone.
    pull request, and approval from at least two implementers from different organisations. An implementer is
    someone who maintains an issuer, relying-party library or agent client that passes the conformance checklist.
 3. **Versioning.** Drafts are numbered 0.x and may break compatibility. Version 1.0 is published only when two
-   independent implementations interoperate end to end. After 1.0, breaking changes require a new major version
+   independent implementations interoperate end to end and pass the conformance checklist. After 1.0, breaking changes require a new major version
    and a migration note.
 4. **Standards track.** The editors submit the specification as an Internet-Draft and seek a home in an
    existing standards body (IETF OAuth working group or the OpenID Foundation). If a working group adopts it,

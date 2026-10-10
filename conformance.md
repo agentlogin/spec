@@ -29,7 +29,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | I-19 | Code single use, valid T_CODE; reuse, wrong or missing `code_verifier`, wrong `redirect_uri`, wrong client, a revoked or expired asserting key, a disabled Agent or a disabled Account gives `invalid_grant`; failed client authentication gives `401` `invalid_client` | 5.4, 5.6 |
 | I-20 | Token response: `access_token`, `token_type Bearer`, `expires_in` T_TOKEN, `id_token`, `scope`, no `refresh_token`; `Cache-Control: no-store` on every non-redirect response of 5 to 7 | 5, 5.6 |
 | I-21 | ID Token claims per 3.1: `actor_type agent`, `scope`, `nonce`, `email` equals handle, `email_verified true` only when permitted, ungranted claims omitted, `exp - iat` ≤ T_TOKEN, `kid` present, no `jwk`/`jku`/`x5u`/`x5c` | 3.1, 3.2 |
-| I-22 | Owner Claims only to Registered Clients and only with `owner_verified_via`; never a token missing a requested Owner Claim | 3.1, 6.6 |
+| I-22 | Owner Claims only to Registered Clients and only with `owner_verified_via`; never a token missing a requested Owner Claim; no Agent signs in before its Owner is verified | 3.1, 6.6, 7.5 |
 | I-23 | UserInfo returns `401 invalid_token` for an unexpired Access Token after key revocation or expiry, Agent disable or Account disable; Access Token accepted nowhere else | 3.3, 5.6 |
 | I-24 | Key enrollment: rejects extra JWK members, inconsistent `kty`/`crv`, unsupported curve, off-curve or small-order points, and previously revoked public keys; ignores `permissions`; `pending` key proved only by a proof signed with that key (`typ agent-login-enrollment+jwt`, `kid` = pending key); unproved key deleted after T_ASSERT | 7.2 |
 | I-25 | `share_owner` settable only with an Owner Credential; Delegated Credentials refused with `403 insufficient_permission` on non-delegable operations; every operation checks the credential belongs to the handle's Owner (`404` otherwise) | 7.8 |
@@ -74,7 +74,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | R-10 | Open Client: metadata document at `client_id`, exact `redirect_uris`, `token_endpoint_auth_method none`; Registered Client requesting `owner_email` publishes `tos_uri` and `policy_uri` | 4.2, 4.3 |
 | R-11 | `initiate_login_uri` accepts only configured `iss` values and performs no fetch otherwise | 5.8 |
 | R-12 | Accepts an Issuer only after verifying that its metadata `issuer` equals the discovered `href` and that every endpoint it names is `https`; applies the 2.2 address, hop, size and identity protections to every request to a discovered endpoint, including Token and UserInfo | 2.2, 10.6 |
-| R-13 | Sends `login_hint` when the expected handle is known; configures a Relay or a Home Issuer it relays, never both; expects `ES256` where its library defaults to `RS256`; `alg` must equal the JWK's `alg` when present; rate-limits unknown-`kid` refetches | 2.4, 5.7, 9 |
+| R-13 | Sends `login_hint` when the expected handle is known (SHOULD); configures a Relay or a Home Issuer it relays, never both; expects `ES256` where its library defaults to `RS256`; `alg` must equal the JWK's `alg` when present; rate-limits unknown-`kid` refetches | 2.4, 5.7, 9 |
 | R-14 | Rejects a token carrying `home_iss` unless `iss` is a configured Relay, whether or not `email` is present; ignores or origin-checks `target_link_uri`; `initiate_login_uri` accepts `GET` and `POST` | 2.5, 5.7, 5.8 |
 
 ## Agent Client

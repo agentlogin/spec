@@ -54,3 +54,16 @@ Three independent reviews (transaction mechanics; OAuth/OIDC profile; keys, Owne
 - Fetch protections now cover every endpoint learned through discovery, with the IANA special-purpose registries and NAT64/IPv4-mapped handling (Sections 2.2, 10.6).
 - Atomicity of assertion acceptance and code issuance; decisions outside `awaiting_consent` refused; Consent Records deleted after T_CONSENT; per-owner counts survive deletion.
 - Conformance checklist: I-38 to I-49, R-12 to R-14, A-9, L-8, L-9 added; I-7, I-8, I-12, I-19, A-3, A-4, L-5 revised.
+
+### Concision and consistency pass (10 October 2026)
+
+Nine section editors proposed cuts; each set was judged by three independent verifiers (requirements, cross-references, exactness) and only unanimous edits were applied: 46 edits, about 240 words. The editors' finding is that the remaining text is one requirement per clause; further shortening would mean removing requirements or splitting the Relay profile into a companion document.
+
+Inconsistencies the pass surfaced, now resolved:
+
+- `login_hint` was a MUST in Section 9, a SHOULD in Section 10.1 and OPTIONAL in Section 5.1. It is a SHOULD, stated in Section 9; Section 10.1 gives the reason.
+- Owner verification is required before an Agent's first sign-in (Section 7.5), which Section 10.8 already assumed and per-owner caps depend on; it was previously required only before issuing Owner Claims.
+- Section 10.4 no longer suggests that Section 2.5 detects a Relay naming a Home Issuer it never consulted (Section 8.1 says it cannot).
+- One criterion for version 1.0 (interoperate end to end and pass the checklist), stated in Status and GOVERNANCE.md.
+- Token presentation (`Authorization: Bearer`) is stated once, in the Section 6 introduction.
+
