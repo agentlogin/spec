@@ -33,3 +33,11 @@ Decisions taken in this draft (open for implementer feedback):
 - Owner approval requires an authenticated Owner session; `share_owner` is granted only with an Owner Credential.
 - Terminal outcomes reach the Relying Party through the continue step; a table maps outcomes to OAuth errors.
 
+### Second review pass (10 October 2026)
+
+- Fixed the escape sequences in Section 5.3 (`\u003c`, `\u003e`, `\u0026`, `\u2028`, `\u2029`).
+- `transaction_token` is valid until the key is revoked or T_RETAIN after the terminal state; `session_token` presentation and the continue URL's credential rule are stated (Sections 5.3, 6.3, 6.5).
+- The `deliver_to_session` rule moved into the assertion table (Section 6.3); `redirect_host` defined (Section 6.1); `invalid_assertion` covers `alg` mismatch and enrollment-proof failures (Section 6.7).
+- Disabled Accounts void unredeemed codes like key revocation (Sections 5.6, 7.4); effects of revocation and disabling are a table (Section 7.4).
+- Conformance classes scoped precisely (Section 12); checklist items I-33 to I-37 and R-12 added.
+- Prose trimmed by about a fifth: top-level table of contents, single statements for `prompt`, `home_issuers`, the escape rule and the algorithm-matching rule, SHOULDs moved from Sections 10 and 11 into the normative sections, Relay claim mapping as a table, Appendix B delegated to the interop notes.

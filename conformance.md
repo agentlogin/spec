@@ -21,12 +21,12 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | I-11 | Accepts a valid assertion (`alg` matching the key type, `typ agent-login+jwt`, `kid`, `aud`, `txn`, `nonce`, `exp` ≤ `iat`+T_ASSERT, `iat` within T_ASSERT past / T_SKEW future) and consumes the challenge | 6.3 |
 | I-12 | Rejects: unknown `kid` or unserved domain (401 `unknown_key`), revoked or expired key (401 `key_revoked`), bad signature (401 `invalid_signature`), wrong `aud`/`txn`/`nonce`, bad `exp`/`iat`, forbidden header, > N_ASSERTION, `login_hint` mismatch (400 `invalid_assertion`), second assertion (409 `assertion_replayed`); `status` and `challenge` unchanged on rejection | 6.3, 6.7 |
 | I-13 | Applies the gates in order: disabled Account → `denied`/`access_denied`; cap → `denied`/`signup_limit_reached`; `prompt=none` with review → `denied`/`consent_required`; `prompt=none` with approval → `denied`/`interaction_required`; approval outstanding → `awaiting_owner`; review outstanding → `awaiting_consent`; else `ready`; never `ready` while a gate is outstanding | 6.3 |
-| I-14 | Returns a `transaction_token` once on a successful non-terminal assertion; refuses the decision step without it (session binding does not authorise it); invalidates it when the key is revoked or the transaction ends | 6.3, 6.4 |
+| I-14 | Returns a `transaction_token` once on a successful assertion; refuses the decision step without it (session binding does not authorise it); accepts it as `Authorization: Bearer` on `GET` of the resource and of the continue URL; invalidates it when the key is revoked and T_RETAIN after the transaction ends | 6.3, 6.4, 6.5 |
 | I-15 | Requires a review exactly when 6.4 says so, with the matching `consent_reason`; skips it when a valid Consent Record covers the request; `accept_disclosure` creates the record | 6.4 |
 | I-16 | Owner approval is given only in an authenticated Owner session; the page shows client, `redirect_host`, requested Owner Claims and handle; approval → `awaiting_consent` or `ready`; refusal → `denied`/`owner_declined`; `expires_at` extended at most to T_OWNER | 6.6 |
 | I-17 | Releases the continue URL to the `transaction_token` holder, and to the Session Holder only when `deliver_to_session` was `true`; HTML request → 302 with `code`, `state`, `iss` (or the error of 5.5); JSON request → `{"redirect"}`; `ready` continue single use (410 on reuse); `denied`/`expired` continue repeatable | 6.5 |
 | I-18 | Maps terminal outcomes to redirect errors per the 5.5 table, to a validated `redirect_uri` only | 5.5 |
-| I-19 | Code single use, valid T_CODE; reuse, wrong or missing `code_verifier`, wrong `redirect_uri`, wrong client, or a revoked asserting key gives `invalid_grant` | 5.4, 5.6 |
+| I-19 | Code single use, valid T_CODE; reuse, wrong or missing `code_verifier`, wrong `redirect_uri`, wrong client, a revoked asserting key or a disabled Account gives `invalid_grant` | 5.4, 5.6 |
 | I-20 | Token response: `access_token`, `token_type Bearer`, `expires_in` T_TOKEN, `id_token`, `scope`, no `refresh_token`; `Cache-Control: no-store` on every non-redirect response of 5 to 7 | 5, 5.6 |
 | I-21 | ID Token claims per 3.1: `actor_type agent`, `scope`, `nonce`, `email` equals handle, `email_verified true` only when permitted, ungranted claims omitted, `exp - iat` ≤ T_TOKEN, `kid` present, no `jwk`/`jku`/`x5u`/`x5c` | 3.1, 3.2 |
 | I-22 | Owner Claims only to Registered Clients and only with `owner_verified_via`; never a token missing a requested Owner Claim | 3.1, 6.6 |
@@ -40,6 +40,11 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | I-30 | JWK Set keys carry stable `kid`, `use`, `alg`; rotation keeps the previous key for T_TOKEN plus the cache lifetime | 7.7 |
 | I-31 | `429` with `Retry-After` when rate limiting | 6.7 |
 | I-32 | `prompt=consent` forces the review; `max_age`, `claims`, `request`, `request_uri` ignored | 5.1 |
+| I-33 | Accepts the `session_token` as `Authorization: Bearer` on the transaction's resources on the JSON path; the continue URL answers only to the credential that released it, `401` `invalid_token` otherwise | 5.3, 6.5 |
+| I-34 | Wait page JSON element escapes `<`, `>`, `&`, U+2028, U+2029 as `\u003c`, `\u003e`, `\u0026`, `\u2028`, `\u2029`; `logo_uri`, `tos_uri`, `policy_uri` rendered only when `https` | 5.3 |
+| I-35 | `invalid_assertion` for an `alg` that does not match the key; an enrollment proof failure answers with the 6.7 error without `status` or `next` | 6.7, 7.2 |
+| I-36 | `client.redirect_host` is the host of the request's `redirect_uri`; `disclosure` does not change during the transaction | 6.1 |
+| I-37 | Terminal transaction readable with `200` for T_RETAIN; `404` `invalid_transaction` only afterwards; `410` `transaction_expired` on a POST or a `ready` continue after a terminal state | 6.2, 6.7 |
 
 ## Relying Party
 
@@ -56,6 +61,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | R-9 | Presents `access_denied` and `signup_limit_reached` distinctly; escapes `error_description`; logs no tokens; separates Owner data | 9 |
 | R-10 | Open Client: metadata document at `client_id`, exact `redirect_uris`, `token_endpoint_auth_method none`; Registered Client requesting `owner_email` publishes `tos_uri` and `policy_uri` | 4.2, 4.3 |
 | R-11 | `initiate_login_uri` accepts only configured `iss` values and performs no fetch otherwise | 5.8 |
+| R-12 | Accepts an Issuer only after verifying that its metadata `issuer` equals the discovered `href`; uses TLS per BCP 195 and sends no credentials on discovery, metadata or JWK Set fetches | 2.2, 5 |
 
 ## Agent Client
 
@@ -63,8 +69,8 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | --- | --- | --- |
 | A-1 | Discovers the Issuer by WebFinger over HTTPS, no HTTP fallback; DNS fallback only when DNSSEC-validated and confirmed by `handle_domains` | 2.2, 2.3 |
 | A-2 | Reads the Transaction Resource from the JSON response, the `Link` header or the embedded element without executing scripts | 5.3 |
-| A-3 | Verifies `iss` and the transaction URLs against its own discovery before asserting; builds a conforming assertion; sends no cookies and no custom headers | 6.3 |
-| A-4 | Sets `deliver_to_session` only for a transaction it loaded itself or a Relay `follow`; inspects `requester` when present | 6.3, 10.1 |
+| A-3 | Verifies `iss` and the transaction URLs against its own discovery before asserting; builds a conforming assertion; sends no cookies | 6.3 |
+| A-4 | Sets `deliver_to_session` only for a transaction it started itself or a Relay `follow`; inspects `requester` when present | 6.3, 10.1 |
 | A-5 | Submits a decision with the `transaction_token`; polls `await_owner` and `follow` with `retry_after`; re-reads `expires_at` | 6.4, 6.6, 8.4 |
 | A-6 | Follows the continue step with the `Accept` value appropriate to who holds the application session and presents its `transaction_token` or `session_token` | 6.5 |
 | A-7 | Stores the private key outside prompts, logs and tool output; supports at least two keys for rotation; validates certificates; never follows HTTPS to HTTP | 6, 7.1 |
@@ -74,7 +80,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 
 | # | Statement | Section |
 | --- | --- | --- |
-| L-1 | Passes every Issuer item; publishes `handle_domains` `[]` unless also a Home Issuer, `home_issuers` and `op_policy_uri` | 8.1 |
+| L-1 | Passes every Issuer item; publishes `handle_domains` `[]` unless also a Home Issuer, `home_issuers` and `op_policy_uri` | 2.4, 8.1 |
 | L-2 | Obtains the handle via `login_hint` or one rate-limited `identify` step; refuses unaccepted or incomplete Home Issuers; requests `profile` upstream always; fails Owner scopes it cannot request upstream with `invalid_scope` | 8.2, 8.4 |
 | L-3 | Derives `sub` and `owner_sub` exactly per 8.3 with domain separation; sets `home_iss`; copies only upstream Claims; omits profile Claims not requested downstream; `exp` not after upstream `exp` | 8.3 |
 | L-4 | Keeps its own Consent Records per Relying Party and runs its own review; forwards Owner Claims only under its own Consent Record; discloses the forwarding | 8.4 |
