@@ -24,7 +24,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | I-14 | Returns a `transaction_token` once on a successful assertion; refuses the decision step without it (session binding does not authorise it); accepts it as `Authorization: Bearer` on `GET` of the resource and of the continue URL; invalidates it when the key is revoked and T_RETAIN after the transaction ends | 6.3, 6.4, 6.5 |
 | I-15 | Requires a review exactly when 6.4 says so, with the matching `consent_reason`; skips it when a valid Consent Record covers the request; `accept_disclosure` creates the record | 6.4 |
 | I-16 | Owner approval is given only in an authenticated Owner session; the page shows client, `redirect_host`, requested Owner Claims and handle; approval → `awaiting_consent` or `ready`; refusal → `denied`/`owner_declined`; `expires_at` extended at most to T_OWNER | 6.6 |
-| I-17 | Releases the continue URL to the `transaction_token` holder, and to the Session Holder only when `deliver_to_session` was `true`; HTML request → 302 with `code`, `state`, `iss` (or the error of 5.5); JSON request → `{"redirect"}`; `ready` continue single use (410 on reuse); `denied`/`expired` continue repeatable | 6.5 |
+| I-17 | Releases the continue URL to the `transaction_token` holder, and to the Session Holder only when `deliver_to_session` was `true`; HTML request → 303 with `code`, `state`, `iss` (or the error of 5.5); JSON request → `{"redirect"}`; `ready` continue single use (410 on reuse); `denied`/`expired` continue repeatable | 6.5 |
 | I-18 | Maps terminal outcomes to redirect errors per the 5.5 table, to a validated `redirect_uri` only | 5.5 |
 | I-19 | Code single use, valid T_CODE; reuse, wrong or missing `code_verifier`, wrong `redirect_uri`, wrong client, a revoked or expired asserting key, a disabled Agent or a disabled Account gives `invalid_grant`; failed client authentication gives `401` `invalid_client` | 5.4, 5.6 |
 | I-20 | Token response: `access_token`, `token_type Bearer`, `expires_in` T_TOKEN, `id_token`, `scope`, no `refresh_token`; `Cache-Control: no-store` on every non-redirect response of 5 to 7 | 5, 5.6 |
@@ -39,7 +39,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | I-29 | Consent revocation deletes only the Consent Record | 7.8 |
 | I-30 | JWK Set keys carry stable `kid`, `use`, `alg`; rotation keeps the previous key for T_TOKEN plus the cache lifetime | 7.7 |
 | I-31 | `429` with `Retry-After` when rate limiting | 6.7 |
-| I-32 | `prompt=consent` forces the review; `max_age`, `claims`, `request`, `request_uri` ignored | 5.1 |
+| I-32 | `prompt=consent` forces the review; `claims`, `display`, `ui_locales`, `id_token_hint`, `acr_values` ignored; `max_age` alters nothing but `auth_time` | 5.1 |
 | I-33 | Accepts the `session_token` as `Authorization: Bearer` on the transaction's resources on the JSON path; the continue URL answers only to the credential that released it, `401` `invalid_token` otherwise | 5.3, 6.5 |
 | I-34 | Wait page JSON element escapes `<`, `>`, `&`, U+2028, U+2029 as `\u003c`, `\u003e`, `\u0026`, `\u2028`, `\u2029`; `logo_uri`, `tos_uri`, `policy_uri` rendered only when `https` | 5.3 |
 | I-35 | `invalid_assertion` for an `alg` that does not match the key; an enrollment proof failure answers with the 6.7 error without `status` or `next` | 6.7, 7.2 |
@@ -50,13 +50,13 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | I-40 | A Registered Client's loopback IP literal `redirect_uri` matches with any port; every other `redirect_uri` by simple string comparison | 5.2 |
 | I-41 | Two concurrent assertions for one transaction: exactly one accepted (`assertion_replayed` for the other); two concurrent `ready` continues: exactly one code | 6.3, 6.5 |
 | I-42 | Accepts `typ` `application/agent-login+jwt` and case variants as `agent-login+jwt`; same for the enrollment type | 6.3, 7.2 |
-| I-43 | `error` responses on an existing transaction omit `next.url` for `continue` unless the requester's credential releases it | 6.5, 6.7 |
+| I-43 | `error` responses on an existing transaction omit `next.url` for `continue` unless the requester's credential releases it; error precedence is `invalid_transaction`, `invalid_token`, `transaction_expired`, then any other | 6.5, 6.7 |
 | I-44 | A decision posted while not `awaiting_consent` → `400` (or `410` when terminal) and the Consent Record is unchanged; a Consent Record unused for T_CONSENT is deleted | 6.4 |
 | I-45 | Owner approval accepted only in a session established by `passkey`, `oidc`, `domain`, or `email` plus a factor not readable by the Agent; a one-time code or link alone cannot approve; the approval page names a Relay client as such | 6.6, 7.5 |
 | I-46 | `DELETE .../keys` revokes `pending` and `active` keys and, with an Owner Credential, every Delegated Credential for the handle; a disabled Agent cannot assert, exchange a code or use UserInfo; Consent Records and Accounts do not survive to a re-created handle | 7.3, 7.4 |
 | I-47 | Delegated Credential: `404` for any other handle of the same Owner; `403` `insufficient_permission` with `WWW-Authenticate: Bearer error="insufficient_scope"` and no change for `permissions` or for `status` `enabled`; `disabled` permitted | 7.8 |
 | I-48 | Enrollment rejects non-canonical coordinates, already enrolled (`pending` or `active`) keys and keys revoked for the handle, comparing by decoded point; `relay_issuer` registrations require redirect URIs on the Relay's host; `id_token_signed_response_alg` other than offered values rejected | 3.2, 4.3, 4.4, 7.2 |
-| I-49 | Every response of Sections 5 to 7 including redirects carries `Cache-Control: no-store`; the Token Response also `Pragma: no-cache`; CORS responses never set `Access-Control-Allow-Credentials: true`; ID Token carries `auth_time` when `max_age` was sent | 3.1, 5, 6 |
+| I-49 | Every response of Sections 5 to 7 including redirects, except the JWK Set, carries `Cache-Control: no-store`; the Token Response also `Pragma: no-cache`; CORS responses never set `Access-Control-Allow-Credentials: true`; ID Token carries `auth_time` when `max_age` was sent | 3.1, 5, 6 |
 
 ## Relying Party
 

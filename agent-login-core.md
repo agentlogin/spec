@@ -281,11 +281,11 @@ The following client metadata are used in Client ID Metadata Documents and regis
 - `max_signups_per_owner`: OPTIONAL. Integer from 0 to 1000000. Maximum number of Accounts the Issuer creates for Agents of one Owner at this client (Section 7.6). Absent means unlimited; `0` pauses new sign-ups.
 - `require_review`: OPTIONAL. Boolean, default `false`. When `true`, every sign-in at this client includes the review step of Section 6.4.
 - `initiate_login_uri`: OPTIONAL. Defined by [OpenID.Registration]; used by Agent-initiated start (Section 5.8).
-- `relay_issuer`: OPTIONAL in registration requests, absent from Client ID Metadata Documents. The Issuer Identifier of a Relay (Section 8) registering as a client. The Issuer MUST verify that the host of every `redirect_uri` registered equals the host of that Issuer Identifier, and uses the value in Section 6.6.
+- `relay_issuer`: OPTIONAL in registration requests, absent from Client ID Metadata Documents. The Issuer Identifier of a Relay (Section 8) registering as a client. The Issuer MUST verify that the host of every `redirect_uri` registered equals the host of that Issuer Identifier, obtains the Relay's `op_policy_uri` from its metadata (Section 2.4), and uses both in Section 6.6.
 
 ## 5. Authentication
 
-Communication with every endpoint of Sections 5 to 7 MUST use TLS per BCP 195 [BCP195], with server identity verified per [RFC9525]. Every response of Sections 5 to 7, including redirects, MUST carry `Cache-Control: no-store`; the Token Response MUST also carry `Pragma: no-cache` (Section 5.1 of [RFC6749]).
+Communication with every endpoint of Sections 5 to 7 MUST use TLS per BCP 195 [BCP195], with server identity verified per [RFC9525]. Every response of Sections 5 to 7, including redirects and excepting the JWK Set (Section 7.7), MUST carry `Cache-Control: no-store`; the Token Response MUST also carry `Pragma: no-cache` (Section 5.1 of [RFC6749]).
 
 ### 5.1 Authentication Request
 
@@ -483,7 +483,7 @@ When `status` is `awaiting_owner`, the Issuer notifies the Owner by a means of i
 
 ### 6.7 Transaction Errors
 
-Errors are returned with an HTTP status and a JSON body `{error, error_description, status, next}`, where `error` is REQUIRED, `error_description` OPTIONAL, and `status` and `next` are present whenever the transaction exists, `next.url` subject to Section 6.5:
+Errors are returned with an HTTP status and a JSON body `{error, error_description, status, next}`, where `error` is REQUIRED, `error_description` OPTIONAL, and `status` and `next` are present whenever the transaction exists, `next.url` subject to Section 6.5. When several apply, the Issuer answers with the first of `invalid_transaction`, `invalid_token`, `transaction_expired`, then any other:
 
 - `invalid_request` (400): malformed body or parameters.
 - `invalid_transaction` (404): unknown transaction identifier, or a terminal transaction the Issuer no longer retains.

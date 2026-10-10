@@ -70,4 +70,8 @@ Inconsistencies the pass surfaced, now resolved:
 ### Implementation feedback (10 October 2026)
 
 - Section 5.8: a Relying Party that accepts Issuers by discovery may accept an agent-initiated start whose `iss` is the Issuer that discovery for `login_hint` yields; it still sends no request to any other `iss`. Found while building the relying-party kit: the previous text made agent-initiated start impossible under open federation.
+- Section 5: the JWK Set is exempt from `no-store` (Section 7.7 relies on its cache lifetime).
+- Section 4.4: an Issuer obtains a Relay's `op_policy_uri` from the Relay's metadata, so that the approval page of Section 6.6 can show it.
+- Section 6.7: error precedence stated (`invalid_transaction`, `invalid_token`, `transaction_expired`, then any other); the text previously left the answer to a decision posted with the wrong credential on a `ready` transaction open.
+- Checklist: I-17 says `303`; I-32 no longer lists `request` and `request_uri` as ignored (I-38 governs).
 
