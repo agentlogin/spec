@@ -1,51 +1,56 @@
 # AgentID interoperability notes (informative)
 
-AgentID (AgentMail, Inc., `https://auth.agentid.com`, public since 6 October 2026) is the first widely deployed
-sign-in for agents. Agent Login keeps its relying-party surface wire-compatible so that an application can
-accept both through one code path, and so that an AgentID-enabled application needs only configuration to add
-an Agent Login issuer. Facts below were verified against the live service on 9–10 October 2026; see the research
-log in the `agentid-research` folder of the reference repository for evidence.
+AgentID (AgentMail, Inc., `https://auth.agentid.com`, public since 6 October 2026) is a publicly deployed OpenID
+Connect sign-in for agents; its directory listed 14 applications on 9 October 2026. Agent Login keeps its
+relying-party surface wire-compatible so that an application can accept both with two OpenID Connect connections
+sharing one account model keyed on (`iss`, `sub`), and so that an AgentID-enabled application needs only
+configuration to add an Agent Login issuer.
 
-## What is the same
+Rows marked (observed) were verified against the live service on 9–10 October 2026 for one unregistered client
+requesting `openid email profile`; rows marked (docs) are taken from AgentMail's documentation and were not
+exercised. Registered clients and Owner Claims were not tested. Evidence: the research log in the
+`agentid-research` folder of the reference repository.
+
+## What is the same on the relying-party side
 
 | Aspect | AgentID | Agent Login |
 | --- | --- | --- |
-| Flow | OIDC authorization code, PKCE S256 mandatory for unregistered clients | Same |
-| Signature | ES256, JWKS at `jwks_uri`, stable `kid`s with overlap | Same (ES256 REQUIRED; EdDSA OPTIONAL) |
-| Token lifetime | id_token and access token 600 s, code 60 s single-use, no refresh | Same defaults |
-| `authorization_response_iss_parameter_supported` | true | REQUIRED |
-| Claims | `actor_type`, `sub`, `email`, `email_verified`, `name`, `preferred_username`, `owner_sub`, `owner_name`, `owner_email`, `owner_email_verified` | Same names and semantics, plus `home_iss`, `owner_verified_via` |
-| Scopes | `openid email profile owner_profile owner_email` | Same, plus `agent_key` |
-| Unregistered clients | `client_id` is an https URL; redirect URI on the same host; `openid email profile` only | Client ID Metadata Document; same scope limit |
-| Per-owner caps | Issuer-enforced, outcome `signup_limit_reached` | Same error code |
-| Account disable | Owner disables one agent at one app; next authorization ends in `access_denied` | Same |
-| Revocation | Deleting the agent's key invalidates unexpired access tokens within seconds; `userinfo` answers 401 | Same, plus bulk revoke and optional push signals |
+| Flow | OIDC authorization code, PKCE S256 mandatory for unregistered clients (observed) | Same, PKCE for every client |
+| Signature | ES256, one key in JWKS at `jwks_uri` (observed); stable `kid`s with overlap (docs) | Same (ES256 REQUIRED; EdDSA OPTIONAL) |
+| Token lifetime | id_token and access token 600 s, single-use code (observed); code lifetime 60 s (docs); no refresh (discovery) | Same |
+| `authorization_response_iss_parameter_supported` | true (observed) | REQUIRED |
+| Claims | `actor_type`, `sub`, `email`, `email_verified`, `name`, `preferred_username`, `owner_sub` (observed); `owner_name`, `owner_email`, `owner_email_verified` (docs, registered clients) | Same names and semantics, plus `home_iss`, `owner_verified_via`; `scope` always present |
+| Scopes | `openid email profile owner_profile owner_email` | Same five values |
+| Account disable | Owner disables one agent at one app; next authorization ends in `access_denied` (observed) | Same |
+| Revocation | Deleting the agent's key invalidated an unexpired access token within seconds; `userinfo` answered 401 (observed) | Same, plus bulk revoke and consent revocation |
 
 ## What differs
 
 | Aspect | AgentID | Agent Login |
 | --- | --- | --- |
-| Identity | An AgentMail inbox; the issuer is fixed | A handle on any domain; the domain selects the issuer (WebFinger) |
-| Agent credential | Key generated in a browser, or a bearer API key used once to approve; the browser-free path exists but is undocumented | Key generated and held by the agent; documented JSON transaction API; browser page is a convenience |
-| Transaction API | Page endpoints (`/v0/authorize/enrollment`, `/authenticate/browser`, `/decision`, `/continue`) with CSRF and a custom header | `/transactions/{id}` JSON resource with `state` and `next` on every response, no cookies |
-| Consent memory | 180 days documented; in testing the review screen appeared on every repeat sign-in for an open client | Remembered consent skips review unless the client sets `prompt=consent` or the issuer policy requires review |
-| Registration | Console with human approval; `/v0/register` closed | RFC 7591 with initial access token, or console |
-| `scope` claim | Advertised, absent for open clients | Always present |
+| Identity | An AgentMail inbox; the issuer is fixed | A handle on any domain; the domain selects the issuer (WebFinger, DNS fallback) |
+| Unregistered clients | Any HTTPS URL the application controls as `client_id` (a path is accepted), same-host redirect rule, no metadata document; the URL need not resolve (observed) | Client ID Metadata Document |
+| Agent credential | Key generated by the wait page's script in a browser, or by any HTTP client that drives the same endpoints (demonstrated with Node); a bearer API key approves the first sign-in; registering an externally held public key is documented, but its signed-assertion approval endpoint was not live on 10 October (observed) | Key generated and held by the agent; documented assertion over the transaction's challenge |
+| Transaction API | Page endpoints `/v0/authorize/enrollment`, `/enrollment/proof`, `/authenticate/browser/challenge`, `/authenticate/browser` (custom `x-agentid-navigation` header), `/disclosure`, `/decision` (form post with CSRF token), `/continue`; responses carry a `next_state` but no next URL (observed) | One Transaction Resource with `status` and `next` on every response; no cookies or CSRF for agent clients |
+| Consent memory | 180 days (docs); in testing every repeat sign-in for the open client required the review, and the disclosure reported `consent_reason: first_visit` despite the earlier `accept_disclosure: true` (observed) | Consent Records skip the review unless `prompt=consent`, `require_review` or issuer policy applies |
+| Per-owner caps | Issuer-enforced before the account exists (docs); API error `limit_exceeded`, page state `signup_limit_reached`; redirect error to the relying party not observed | Redirect error `signup_limit_reached` |
+| Registration | Console with human approval; `/v0/register` answers 401 (observed) | RFC 7591 with initial access token, or console |
+| `scope` claim | Advertised; absent from the tested client's tokens (observed) | Always present |
 | Hosting | Single provider | Any; reference implementation under Apache-2.0 |
 
 ## Accepting both in one application
 
 1. Configure two OIDC connections: issuer `https://auth.agentid.com` and your Agent Login issuer or relay.
-2. Key user records on `(iss, sub)`. Both issuers guarantee `sub` stability per agent, neither guarantees it
-   across issuers.
+2. Key user records on (`iss`, `sub`). Both issuers guarantee `sub` stability per agent (AgentID: docs); neither guarantees it across issuers.
 3. Branch on `actor_type == "agent"` for agent policy; both issuers set it.
-4. Apply per-owner limits on `owner_sub`; both issuers emit it with the `profile` scope. Values are not comparable
-   across issuers.
-5. For owner contact, request `owner_email`; both issuers deliver it only to registered clients.
+4. Apply per-owner limits on `owner_sub`; both issuers emit it with the `profile` scope. Values are not comparable across issuers.
+5. For owner contact, request `owner_email`; both issuers deliver it only to registered clients (AgentID: docs).
+6. The handle-to-Issuer binding of Section 2.5 of the core specification applies to the Agent Login connection only; an AgentID token for `x@agentmail.to` is accepted by issuer configuration.
 
 ## Mapping for an Agent Login client talking to AgentID
 
 An agent client MAY implement an AgentID adapter: start the transaction at the application as usual, read the
-22-character `auth_token` (equal to the transaction `jti`) from the AgentID wait page's
-`agentid-session-action` metadata, approve with `POST https://api.agentmail.to/v0/inboxes/{inbox}/authorize`,
-and complete with the page endpoints listed above. This path is unsupported by AgentMail and may change.
+22-character `auth_token` displayed on the AgentID wait page (`/v0/authorize/wait?jti=...`), approve with the
+documented bearer call `POST https://api.agentmail.to/v0/inboxes/{inbox}/authorize {auth_token, accept_disclosure}`,
+and complete through the page endpoints listed above. The bearer approval call is documented by AgentMail; the
+page endpoints are not, their support and stability are unestablished, and they may change.
