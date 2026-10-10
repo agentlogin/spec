@@ -365,7 +365,7 @@ Transaction outcomes map to errors as follows:
 
 ### 5.6 Token Request and Response
 
-The Relying Party presents `grant_type=authorization_code`, `code`, `redirect_uri`, `code_verifier` and, for an Open Client, `client_id`; a Registered Client authenticates per Section 4.3. The Issuer MUST verify that the code was issued to the authenticated Registered Client or to the presented Open Client `client_id` (Section 4.1.3 of [RFC6749]), that `redirect_uri` equals the request's, and that `code_verifier` matches the challenge; it MUST answer `invalid_grant` when any of these fails, when `code_verifier` is absent, or when the code is unknown, expired, used, or belongs to a transaction whose asserting key was revoked or expired, whose Agent was disabled or deleted, or whose Account was disabled (Sections 7.3, 7.4). Failed client authentication is answered with `401` `invalid_client` (Section 5.2 of [RFC6749]). The successful response is per Section 3.1.3.3 of [OpenID.Core] with `access_token`, `token_type` `Bearer`, `expires_in` (T_TOKEN), `id_token` and `scope`, all REQUIRED. The Issuer MUST NOT issue Refresh Tokens. The Access Token is opaque to the Relying Party and MUST be accepted only at the UserInfo Endpoint.
+The Relying Party presents `grant_type=authorization_code`, `code`, `redirect_uri`, `code_verifier` and, for an Open Client, `client_id`; a Registered Client authenticates per Section 4.3. The Issuer MUST verify that the code was issued to the authenticated Registered Client or to the presented Open Client `client_id` (Section 4.1.3 of [RFC6749]), that `redirect_uri` equals the request's, and that `code_verifier` matches the challenge; it MUST answer `invalid_grant` when any of these fails, when `code_verifier` is absent, or when the code is unknown, expired, used, or belongs to a transaction whose asserting key was revoked or expired, whose Agent was disabled or deleted, or whose Account was disabled (Sections 7.3, 7.4). Failed client authentication is answered with `401` `invalid_client` (Section 5.2 of [RFC6749]). The successful response is per Section 3.1.3.3 of [OpenID.Core] with `access_token`, `token_type` `Bearer`, `expires_in` (T_TOKEN), `id_token` and `scope`, all REQUIRED. A code MUST be redeemed at most once, atomically with respect to concurrent Token Requests. The Issuer MUST NOT issue Refresh Tokens. The Access Token is opaque to the Relying Party and MUST be accepted only at the UserInfo Endpoint.
 
 ### 5.7 ID Token Validation
 
@@ -404,7 +404,7 @@ Every response in this section, including error responses for an existing transa
 - `disclosure`: REQUIRED. Array of objects `{scope, title, description}`, one per requested scope, describing what the client receives. It MUST NOT change during the transaction's lifetime.
 - `requester`: OPTIONAL. Object describing the Session Holder as seen by the Issuer: `user_agent` and `network` (a coarse network location), as strings. Both values are controlled by the Session Holder and MUST NOT decide `deliver_to_session`.
 - `challenge`: REQUIRED while `status` is `awaiting_agent` and `next.action` is `assert`. Opaque value of at least N_ENTROPY, single use.
-- `consent_reason`: REQUIRED while `status` is `awaiting_consent`. One of `first_visit`, `material_change`, `expired`, `prompt_consent`, `policy` (Section 6.4).
+- `consent_reason`: REQUIRED while `status` is `awaiting_consent`. One of `first_visit`, `material_change`, `expired`, `prompt_consent`, `policy` (Section 6.4): the first of them that keeps the review outstanding.
 - `login_hint`: OPTIONAL. The handle named in the Authentication Request.
 - `reason`: REQUIRED when `status` is `denied`. One of `cancelled`, `access_denied`, `key_revoked`, `owner_declined`, `consent_required`, `interaction_required`, `signup_limit_reached`.
 - `transaction_token`: present only in the response to a successful assertion (Section 6.3) or, at a Relay, as Section 8.4 describes.
@@ -463,7 +463,7 @@ Steps 6 and 7 MUST be performed atomically with respect to other assertions for 
 
 ### 6.4 Review and Consent
 
-A Consent Record stores the handle, the `client_id`, the granted scopes, the client's `redirect_host`, `client_name`, `tos_uri` and `policy_uri`, and the time of last use. The Issuer MUST require a review when any of the following holds, and MUST NOT otherwise:
+A Consent Record stores the handle, the `client_id`, the granted scopes, the client's `redirect_host`, `client_name`, `tos_uri` and `policy_uri`, and the time of last use, which every sign-in that relies on the record updates. The Issuer MUST require a review when any of the following holds, and MUST NOT otherwise:
 
 - no Consent Record exists for (Agent, `client_id`): `consent_reason` `first_visit`;
 - a record exists but `requested_scopes` is not a subset of its scopes, or a stored client value changed: `material_change`;
@@ -479,7 +479,7 @@ When `status` is `ready`, `denied` or `expired`, `next.url` is a continue URL co
 
 ### 6.6 Owner Approval
 
-When `status` is `awaiting_owner`, the Issuer notifies the Owner by a means of its choosing. The approval or refusal MUST be given within a session in which the Owner authenticated by `passkey`, `oidc` or `domain` (Section 7.5), or by `email` together with a factor not delivered to a mailbox or to any other channel readable by the Agent; a session established by a one-time code or link alone MUST NOT approve. The approval page MUST show the client, including its `redirect_host`, the requested Owner Claims and the Agent Handle; when the client registered `relay_issuer` (Section 4.4), the page MUST say that the client is a Relay and that the Owner Claims will be forwarded to Relying Parties of that Relay under its `op_policy_uri`. Approval sets `status` to `awaiting_consent` if a review is still outstanding, else `ready`; refusal sets `status` to `denied` with `reason` `owner_declined`. While `status` is `awaiting_owner` the Issuer MAY extend `expires_at` up to T_OWNER after creation; the Agent Client MUST re-read it on every poll. The Issuer MUST NOT issue a token that omits an Owner Claim the client requested.
+When `status` is `awaiting_owner`, the Issuer notifies the Owner by a means of its choosing. The approval or refusal MUST be given within a session in which the Owner authenticated by `passkey`, `oidc` or `domain` (Section 7.5), or by `email` together with a factor not delivered to a mailbox or to any other channel readable by the Agent; a session established by a one-time code or link alone MUST NOT approve. The approval page MUST show the client, including its `redirect_host`, the requested Owner Claims and the Agent Handle; when the client registered `relay_issuer` (Section 4.4), the page MUST say that the client is a Relay and that the Owner Claims will be forwarded to Relying Parties of that Relay under its `op_policy_uri`. Approval sets `status` to `awaiting_consent` if a review is still outstanding, else `ready`; refusal sets `status` to `denied` with `reason` `owner_declined`. While `status` is `awaiting_owner` the Issuer MAY extend `expires_at` up to T_OWNER after creation; the Agent Client MUST re-read it on every poll. The Issuer MUST NOT issue a token that omits an Owner Claim the client requested; when it cannot supply one for this Owner, it sets `status` to `denied` with `reason` `access_denied` at step 10 of Section 6.3.
 
 ### 6.7 Transaction Errors
 
@@ -547,7 +547,7 @@ For an organisation (Section 1.2), `owner_name` and `owner_email` identify its d
 
 ### 7.6 Per-Owner Sign-up Caps
 
-A client MAY set `max_signups_per_owner` (Section 4.4). The Issuer counts, per (Owner, `client_id`), every Account ever created, including disabled and deleted Accounts, plus transactions that passed step 9 of Section 6.3 and are not yet terminal. The count MUST survive deletion of the Owner's Agents and of the Owner; an Owner who re-verifies an `owner_email` previously verified at the Issuer inherits the count for that address.
+A client MAY set `max_signups_per_owner` (Section 4.4). The Issuer counts, per (Owner, `client_id`), every Account ever created, including disabled and deleted Accounts, plus the Agents without an Account that have a transaction which passed step 9 of Section 6.3 and is neither terminal nor past its `expires_at`; the check and the reservation MUST be atomic per (Owner, `client_id`), and an Account MUST be counted once however many transactions complete for it at the same time. The count MUST survive deletion of the Owner's Agents and of the Owner; an Owner who re-verifies an `owner_email` previously verified at the Issuer inherits the count for that address.
 
 ### 7.7 Issuer Signing Keys and Rotation
 

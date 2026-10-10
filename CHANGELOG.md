@@ -78,3 +78,13 @@ Inconsistencies the pass surfaced, now resolved:
 - Sections 4.4 and 6.1: "host" includes the port.
 - Section 7.8: `404` takes precedence over `403` for a Delegated Credential; Section 7.2: a duplicate or revoked key is refused with `invalid_request`.
 
+### External review of the reference implementation (10 October 2026)
+
+A review of the reference implementation at commit 9b6dd09 reported twelve defects; all were reproduced and fixed there. Where the specification was silent, it now says:
+
+- Section 5.6: a code is redeemed at most once, atomically with respect to concurrent Token Requests.
+- Section 6.1: when several review reasons hold, `consent_reason` is the first that keeps the review outstanding. (Section 6.3 step 10 already made `prompt=consent` and `require_review` independent of `accept_disclosure`; the reference issuer did not.)
+- Section 6.4: a sign-in that relies on a Consent Record updates its time of last use.
+- Section 6.6: a requested Owner Claim the Issuer cannot supply ends the transaction `denied` with `access_denied`.
+- Section 7.6: the cap counts Agents with an in-flight transaction, not transactions; expired transactions hold no place; check and reservation are atomic; an Account is counted once.
+
