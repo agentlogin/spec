@@ -74,4 +74,7 @@ Inconsistencies the pass surfaced, now resolved:
 - Section 4.4: an Issuer obtains a Relay's `op_policy_uri` from the Relay's metadata, so that the approval page of Section 6.6 can show it.
 - Section 6.7: error precedence stated (`invalid_transaction`, `invalid_token`, `transaction_expired`, then any other); the text previously left the answer to a decision posted with the wrong credential on a `ready` transaction open.
 - Checklist: I-17 says `303`; I-32 no longer lists `request` and `request_uri` as ignored (I-38 governs).
+- Section 5: `no-store` also covers the UserInfo and registration endpoints.
+- Sections 4.4 and 6.1: "host" includes the port.
+- Section 7.8: `404` takes precedence over `403` for a Delegated Credential; Section 7.2: a duplicate or revoked key is refused with `invalid_request`.
 

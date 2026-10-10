@@ -14,6 +14,12 @@ complete a sign-in without a browser.
 | [Conformance checklist](conformance.md) | Working draft |
 | [AgentID interoperability notes](interop-agentid.md) | Informative |
 
+## Reference implementation
+
+[agentlogin/reference](https://github.com/agentlogin/reference) (Apache-2.0) follows this draft: an issuer, a
+conformance harness that runs the checklist against any issuer, an agent client and command line, a relying-party
+kit, and an example application.
+
 ## Status of this work
 
 Draft 0.1 is a working draft published for implementer review. Nothing here is final. Breaking changes are
