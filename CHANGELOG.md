@@ -87,4 +87,5 @@ A review of the reference implementation at commit 9b6dd09 reported twelve defec
 - Section 6.4: a sign-in that relies on a Consent Record updates its time of last use.
 - Section 6.6: a requested Owner Claim the Issuer cannot supply ends the transaction `denied` with `access_denied`.
 - Section 7.6: the cap counts Agents with an in-flight transaction, not transactions; expired transactions hold no place; check and reservation are atomic; an Account is counted once.
+- Follow-up from re-testing the fixes: a Consent Record is renewed only by a sign-in that reaches `ready` (Section 6.4); a completion that creates an Account is atomic with the cap check (Section 7.6); a discovery result reached through redirects is no fresher than its least fresh hop (Section 2.2).
 
