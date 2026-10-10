@@ -41,3 +41,16 @@ Decisions taken in this draft (open for implementer feedback):
 - Disabled Accounts void unredeemed codes like key revocation (Sections 5.6, 7.4); effects of revocation and disabling are a table (Section 7.4).
 - Conformance classes scoped precisely (Section 12); checklist items I-33 to I-37 and R-12 added.
 - Prose trimmed by about a fifth: top-level table of contents, single statements for `prompt`, `home_issuers`, the escape rule and the algorithm-matching rule, SHOULDs moved from Sections 10 and 11 into the normative sections, Relay claim mapping as a table, Appendix B delegated to the interop notes.
+
+### Security review pass (10 October 2026)
+
+Three independent reviews (transaction mechanics; OAuth/OIDC profile; keys, Owners, Relay) produced two blockers, about a dozen majors and thirty minors; all were applied.
+
+- Owner approval sessions can no longer be opened with a mailbox code alone (Sections 6.6, 7.5, 7.8), since Agents read their Owners' mail.
+- Relay hand-off: an Agent Client follows `follow` only for a Relay transaction it started, and only to a Home Issuer transaction whose client redirects to the Relay's host; the Relay sends `login_hint` and `prompt=none` upstream, requests `email`, verifies it, registers with `relay_issuer`, and the Home Issuer's approval page names it as a Relay (Sections 4.4, 6.6, 8.2, 8.4).
+- "A transaction it started itself" is defined; `requester` is informative only; the wait page never embeds `session_token`; the cookie is set once (Sections 5.3, 6.1, 6.3).
+- Delegated Credentials are bound to one handle, may only disable Accounts, cannot touch `permissions`, and are invalidated by the Owner's revoke-all; `pending` keys are revoked too; disabled or deleted Agents cannot sign in; Consent Records and Accounts belong to the Agent, not the handle (Sections 6.3, 7.2 to 7.4, 7.8).
+- OAuth/OIDC alignment: RS256 departure stated, `id_token_signed_response_alg`, `request`/`request_uri` rejected rather than ignored, `response_mode`, `POST` to the Authorization Endpoint, `auth_time` with `max_age`, loopback redirect ports, pre-transaction error delivery, `typ` comparison per RFC 7515, `Pragma: no-cache`, `no-store` on redirects, `pairwise` removed, RFC 7591 profile, `target_link_uri`, IANA corrections and the `_agentlogin` node-name registration.
+- Fetch protections now cover every endpoint learned through discovery, with the IANA special-purpose registries and NAT64/IPv4-mapped handling (Sections 2.2, 10.6).
+- Atomicity of assertion acceptance and code issuance; decisions outside `awaiting_consent` refused; Consent Records deleted after T_CONSENT; per-owner counts survive deletion.
+- Conformance checklist: I-38 to I-49, R-12 to R-14, A-9, L-8, L-9 added; I-7, I-8, I-12, I-19, A-3, A-4, L-5 revised.

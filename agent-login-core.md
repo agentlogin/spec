@@ -140,16 +140,17 @@ A handle names an Agent; its domain names the Home Issuer by WebFinger (Section 
 ```
 handle  = local "@" domain
 local   = dot-atom-text          ; Section 3.2.3 of [RFC5322], ASCII only
-domain  = <domain name per Section 2.3.1 of [RFC1035], as A-labels>
+domain  = <domain name per Section 2.3.1 of [RFC1035] as relaxed by Section 2.1 of [RFC1123];
+           every label an LDH-label or A-label [RFC5890]>
 ```
 
-The `local` part is limited to 64 octets and the handle to 254 octets. Internationalised local parts [RFC6530] are not supported in this version. Two handles are equal when their `local` parts are octet-for-octet equal and their domains are equal after conversion to lower-case A-labels. An Issuer SHOULD register `local` parts in lower case. The corresponding URI is `acct:` followed by the handle [RFC7565].
+The `local` part is limited to 64 octets and the handle to 254 octets (Section 4.5.3.1 of [RFC5321]). Internationalised local parts [RFC6530] are not supported in this version. Two handles are equal when their `local` parts are octet-for-octet equal and their domains are equal after conversion to lower-case A-labels. An Issuer SHOULD register `local` parts in lower case. The corresponding URI is `acct:` followed by the handle, any octet of `local` not permitted in `userpart` percent-encoded (Section 7 of [RFC7565]).
 
 ### 2.2 WebFinger Lookup
 
-The requester sends `GET /.well-known/webfinger?resource=acct:{handle}&rel=http://openid.net/specs/connect/1.0/issuer`, percent-encoded, to the handle's domain over HTTPS (Appendix A.1). The response is a JRD; the `href` of the first link whose `rel` is `http://openid.net/specs/connect/1.0/issuer` is the Issuer Identifier, as in Section 2 of [OpenID.Discovery]. The lookup has failed, and MUST NOT be retried over HTTP, when `href` is not an `https` URL without query or fragment, the certificate is invalid, the status is 4xx or 5xx, or the connection fails; a `404`, or a JRD without a matching link, permits the DNS fallback of Section 2.3. A domain MAY delegate by answering with a 3xx status and a `Location` on another host (Section 7 of [RFC7033]); the requester MUST follow at most five redirects and MUST require HTTPS at each hop.
+The requester sends `GET /.well-known/webfinger?resource=acct:{handle}&rel=http://openid.net/specs/connect/1.0/issuer`, percent-encoded, to the handle's domain over HTTPS (Appendix A.1). The response is a JRD; the `href` of the first link whose `rel` is `http://openid.net/specs/connect/1.0/issuer` is the Issuer Identifier, as in Section 2 of [OpenID.Discovery]. The lookup has failed, and MUST NOT be retried over HTTP, when `href` is not an `https` URL without query or fragment, the certificate is invalid, the status is 4xx other than `404` or 5xx, or the connection fails; a `404`, a JRD without a matching link, or a domain with no A or AAAA record permits the DNS fallback of Section 2.3. A domain MAY delegate by answering with a 3xx status and a `Location` on another host (Section 7 of [RFC7033]); the requester MUST follow at most five redirects and MUST require HTTPS at each hop.
 
-For every fetch in this section, in Section 2.4 and of a JWK Set, the requester MUST NOT connect to a special-use address [RFC6890], MUST re-check the resolved address at every redirect hop, MUST limit the response to N_FETCH, and MUST send no credentials. The requester MUST verify that the `issuer` member of the metadata fetched from `{href}/.well-known/openid-configuration` equals `href`. Results are cached per HTTP caching rules for at most T_CACHE. An Issuer SHOULD NOT expose handle lists beyond the per-handle lookup.
+For every request to a URL learned through discovery, including the WebFinger lookup, the Issuer metadata, the JWK Set and the endpoints the metadata names, the requester MUST resolve the host, MUST NOT connect to an address that the IANA Special-Purpose Address Registries [RFC6890] [RFC8190] mark as not globally reachable, treating an IPv4-mapped (`::ffff:0:0/96`) or IPv4-embedded (`64:ff9b::/96`) IPv6 address as its embedded IPv4 address, MUST connect only to the address it checked, MUST repeat the check at every redirect hop, MUST verify the server's identity per [RFC9525], MUST limit the response to N_FETCH, and MUST send no credentials other than those Sections 3.3 and 5.6 define. A requester MUST reject metadata whose `authorization_endpoint`, `token_endpoint`, `userinfo_endpoint`, `jwks_uri`, `transaction_endpoint` or `agents_endpoint` is not an `https` URL. The requester MUST verify that the `issuer` member of the metadata fetched from `{href}/.well-known/openid-configuration` equals `href`. Results are cached per HTTP caching rules for at most T_CACHE. A WebFinger server SHOULD NOT expose handle lists beyond the per-handle lookup.
 
 ### 2.3 DNS Fallback
 
@@ -159,18 +160,21 @@ When Section 2.2 permits it, the requester MAY query the TXT record at `_agentlo
 _agentlogin.example.com.  IN TXT  "v=agentlogin1; iss=https://issuer.example"
 ```
 
-The requester MUST accept the record only when the response was DNSSEC-validated, locally or by a validating resolver reached over a trusted channel; an unvalidated record MUST be discarded. `iss` MUST be an `https` URL without query or fragment. A record without `v=agentlogin1`, or with more than one `iss`, MUST be ignored. The requester MUST then fetch the Issuer's metadata (Section 2.4) and check that `handle_domains` contains the domain.
+The requester concatenates the character-strings of each TXT record (Section 3.3 of [RFC7208]); when more than one record at the name begins with `v=agentlogin1`, all MUST be ignored. The requester MUST accept the record only when the response was DNSSEC-validated (AD bit, Section 3.2.3 of [RFC4035]), locally or by a validating resolver reached over a trusted channel [RFC4033]; an unvalidated record MUST be discarded. `iss` MUST be an `https` URL without query or fragment. A record without `v=agentlogin1`, or with more than one `iss`, MUST be ignored. The requester MUST then fetch the Issuer's metadata (Section 2.4) and check that `handle_domains` matches the domain (Section 2.4).
 
 ### 2.4 Issuer Metadata
 
-An Issuer MUST publish metadata at `{Issuer Identifier}/.well-known/openid-configuration` per [OpenID.Discovery] and [RFC8414] with the following values:
+An Issuer MUST publish metadata at `{Issuer Identifier}/.well-known/openid-configuration` per [OpenID.Discovery], using the member definitions of [RFC8414], with the following values:
 
-- `response_types_supported`: MUST contain `code` and SHOULD contain nothing else.
+- `response_types_supported`: MUST contain `code` and SHOULD contain nothing else. `response_modes_supported`: `["query"]`.
 - `grant_types_supported`: `["authorization_code"]`.
 - `code_challenge_methods_supported`: MUST contain `S256`; MUST NOT contain `plain`.
-- `id_token_signing_alg_values_supported`: MUST contain `ES256`; MAY contain `EdDSA`; MUST NOT contain `none`.
+- `id_token_signing_alg_values_supported`: MUST contain `ES256`; MAY contain `EdDSA`; MUST NOT contain `none` or `RS256`. This departs from Section 15.1 of [OpenID.Core] and Section 3 of [OpenID.Discovery], which require `RS256`; a Relying Party MUST configure a library that defaults to `RS256` to expect `ES256`.
+- `token_endpoint_auth_signing_alg_values_supported`: REQUIRED when `private_key_jwt` is offered; MUST contain `ES256`; MUST NOT contain `none`.
+- `request_parameter_supported`, `request_uri_parameter_supported`: `false` (Section 5.1).
+- `userinfo_endpoint`: REQUIRED (Section 3.3). `registration_endpoint`: REQUIRED when the Issuer supports [RFC7591].
 - `agent_key_algs_supported`: REQUIRED. JWS algorithms accepted in assertions and enrollment proofs; MUST contain `ES256`; MAY contain `EdDSA`.
-- `subject_types_supported`: MUST contain `public`; MAY contain `pairwise`.
+- `subject_types_supported`: `["public"]`; this version defines no `pairwise` subjects.
 - `authorization_response_iss_parameter_supported`: `true`.
 - `client_id_metadata_document_supported`: `true`.
 - `scopes_supported`: MUST contain `openid`, `email`, `profile`, `owner_profile` and `owner_email`.
@@ -195,14 +199,15 @@ The ID Token is as defined in Section 2 of [OpenID.Core] with the Claims and con
 ### 3.1 Claims
 
 - `iss`: REQUIRED. Issuer Identifier of the Issuer that signed the token.
-- `sub`: REQUIRED. Opaque identifier of the Agent: a base64url string of at least N_ENTROPY, stable for one Agent at every Relying Party (`public` subject type), different for every Agent, and never derivable from the handle. Deleting an Agent and creating one with the same handle MUST produce a new value.
+- `sub`: REQUIRED. Opaque identifier of the Agent: a base64url string of at least N_ENTROPY and at most 255 characters (Section 2 of [OpenID.Core]), stable for one Agent at every Relying Party (`public` subject type), different for every Agent, and never derivable from the handle. Deleting an Agent and creating one with the same handle MUST produce a new value.
 - `aud`: REQUIRED. The Relying Party's `client_id`, as a single string.
 - `exp`, `iat`: REQUIRED. `exp` minus `iat` MUST NOT exceed T_TOKEN.
 - `jti`: REQUIRED. Unique identifier of this token.
 - `nonce`: REQUIRED. The value from the Authentication Request (Section 5.1).
+- `auth_time`: OPTIONAL; REQUIRED when the Authentication Request carried `max_age`. Time the assertion was accepted (Section 6.3 step 7).
 - `actor_type`: REQUIRED. Value MUST be `agent`.
 - `scope`: REQUIRED. Space-delimited scope values granted in this sign-in [RFC8693].
-- `email`: The Agent Handle. `email_verified`: MUST be `true`. An Issuer MUST NOT issue either Claim unless the handle's domain is in its `handle_domains` and the Agent is enabled; a Relay copies them from the upstream ID Token (Section 8.3).
+- `email`: The Agent Handle. `email_verified`: MUST be `true`. An Issuer MUST NOT issue either Claim unless its `handle_domains` matches the handle's domain (Section 2.4) and the Agent is enabled; a Relay copies them from the upstream ID Token (Section 8.3).
 - `name`: Display name of the Agent; omitted when none is set.
 - `preferred_username`: Short name of the Agent, not guaranteed unique.
 - `owner_sub`: Opaque identifier of the Owner with the same syntax as `sub`, identical for every Agent of one Owner at every Relying Party of one Issuer and never derivable from the Owner's address.
@@ -215,7 +220,7 @@ Ungranted Claims MUST be omitted, not set to `null` or empty. Other Claims MAY b
 
 ### 3.2 Signing
 
-The ID Token MUST be a JWS signed with `ES256` [RFC7518]; an Issuer MAY additionally offer `EdDSA` with Ed25519 [RFC8037] when advertised in its metadata. The JOSE header MUST contain `alg` and `kid`, SHOULD contain `typ` with the value `JWT`, and MUST NOT contain `jwk`, `jku`, `x5u` or `x5c`. The signing key MUST be published in the Issuer's JWK Set under that `kid` (Section 7.7).
+The ID Token MUST be a JWS signed with `ES256` [RFC7518]; an Issuer MAY additionally offer `EdDSA` with Ed25519 [RFC8037] when advertised in its metadata. The JOSE header MUST contain `alg` and `kid`, SHOULD contain `typ` with the value `JWT`, and MUST NOT contain `jwk`, `jku`, `x5u` or `x5c`. The signing key MUST be published in the Issuer's JWK Set under that `kid` (Section 7.7). A client MAY state `id_token_signed_response_alg` [OpenID.Registration]; the Issuer MUST sign with that value when it is `ES256` or an advertised `EdDSA`, MUST reject other values (`invalid_client_metadata` at registration, `invalid_request` for an Open Client), and MUST sign with `ES256` when it is absent.
 
 ### 3.3 UserInfo and Live State
 
@@ -263,11 +268,11 @@ Scope values are space-delimited in the `scope` parameter. Scope values not list
 
 ### 4.2 Open Clients
 
-An Open Client identifies itself with a `client_id` that is the HTTPS URL of its Client ID Metadata Document [CIMD] (compare [IndieAuth]). The URL MUST satisfy Section 3 of [CIMD]: `https` scheme, a non-empty path, no userinfo, no fragment, no `.` or `..` path segments; the Issuer MUST reject other values with `invalid_request` without fetching. The document MUST contain `client_id` equal to that URL, `redirect_uris`, and `token_endpoint_auth_method` with the value `none`; it SHOULD contain `client_name`, `logo_uri`, `tos_uri`, `policy_uri` and `initiate_login_uri`. The Issuer MUST fetch the document when it first sees the `client_id` and on cache expiry, applying the protections of Section 2.2; it MUST NOT follow redirects, MUST require a JSON content type and a `200` status, MUST reject documents larger than N_CIMD, and MAY cache per HTTP caching rules. `redirect_uris` MUST NOT contain `http` or loopback URIs (matching: Section 5.2). An Open Client MAY request `openid`, `email` and `profile`; a request containing `owner_profile` or `owner_email` MUST fail with `invalid_scope`.
+An Open Client identifies itself with a `client_id` that is the HTTPS URL of its Client ID Metadata Document [CIMD] (compare [IndieAuth]). The URL MUST satisfy Section 3 of [CIMD]: `https` scheme, a host that is a domain name rather than an IP literal, a non-empty path, no userinfo, no fragment, no `.` or `..` path segments; the Issuer MUST reject other values with `invalid_request` without fetching. The document MUST contain `client_id` equal to that URL, `redirect_uris`, and `token_endpoint_auth_method` with the value `none`; it SHOULD contain `client_name`, `logo_uri`, `tos_uri`, `policy_uri` and `initiate_login_uri`. The Issuer MUST fetch the document when it first sees the `client_id` and on cache expiry, applying the protections of Section 2.2; it MUST NOT follow redirects, MUST require a JSON content type and a `200` status, MUST reject documents larger than N_CIMD, and MAY cache per HTTP caching rules. `redirect_uris` MUST NOT contain `http` or loopback URIs (matching: Section 5.2). An Open Client MAY request `openid`, `email` and `profile`; a request containing `owner_profile` or `owner_email` MUST fail with `invalid_scope`.
 
 ### 4.3 Registered Clients
 
-A Registered Client is created by Dynamic Client Registration [RFC7591] presented with an initial access token, or by a mechanism the Issuer operates; an Issuer MUST support at least one of these. The Issuer assigns an opaque `client_id` and either a `client_secret` or accepts a JWK Set for `private_key_jwt` [RFC7523]. A Registered Client authenticates at the Token Endpoint with one of `client_secret_basic` [RFC7617], `client_secret_post` or `private_key_jwt` (RECOMMENDED) as advertised in the Issuer's metadata, MAY register loopback redirect URIs for development [RFC8252], MAY request `owner_profile` and `owner_email`, and MUST publish `tos_uri` and `policy_uri` when it requests `owner_email`.
+A Registered Client is created by Dynamic Client Registration [RFC7591] presented with an initial access token, or by a mechanism the Issuer operates; an Issuer MUST support at least one of these. The Issuer assigns an opaque `client_id` and either a `client_secret` or accepts a JWK Set for `private_key_jwt` [RFC7523]. A Registered Client authenticates at the Token Endpoint with one of `client_secret_basic` [RFC7617], `client_secret_post` or `private_key_jwt` (RECOMMENDED) as advertised in the Issuer's metadata, MAY register loopback IP literal redirect URIs for development (`localhost` as a host name is NOT RECOMMENDED, Section 8.3 of [RFC8252]), MAY request `owner_profile` and `owner_email`, and MUST publish `tos_uri` and `policy_uri` when it requests `owner_email`. A registration request MUST include `redirect_uris` and `token_endpoint_auth_method`, and `jwks` or `jwks_uri` for `private_key_jwt`; `grant_types` other than `authorization_code`, `response_types` other than `code`, `token_endpoint_auth_method` `none`, and an `id_token_signed_response_alg` the Issuer does not offer MUST be rejected with `invalid_client_metadata` (Section 3.2.2 of [RFC7591]).
 
 ### 4.4 Client Metadata Used by this Specification
 
@@ -276,14 +281,15 @@ The following client metadata are defined for use in Client ID Metadata Document
 - `max_signups_per_owner`: OPTIONAL. Integer from 0 to 1000000. Maximum number of Accounts the Issuer creates for Agents of one Owner at this client (Section 7.6). Absent means unlimited; `0` pauses new sign-ups.
 - `require_review`: OPTIONAL. Boolean, default `false`. When `true`, every sign-in at this client includes the review step of Section 6.4.
 - `initiate_login_uri`: OPTIONAL. Defined by [OpenID.Registration]; used by Agent-initiated start (Section 5.8).
+- `relay_issuer`: OPTIONAL in registration requests, absent from Client ID Metadata Documents. The Issuer Identifier of a Relay (Section 8) registering as a client. The Issuer MUST verify that the host of every `redirect_uri` registered equals the host of that Issuer Identifier, and uses the value in Section 6.6.
 
 ## 5. Authentication
 
-Communication with every endpoint of Sections 5 to 7 MUST use TLS per BCP 195 [BCP195]. Every non-redirect response of Sections 5 to 7 MUST carry `Cache-Control: no-store`.
+Communication with every endpoint of Sections 5 to 7 MUST use TLS per BCP 195 [BCP195], with server identity verified per [RFC9525]. Every response of Sections 5 to 7, including redirects, MUST carry `Cache-Control: no-store`; the Token Response MUST also carry `Pragma: no-cache` (Section 5.1 of [RFC6749]).
 
 ### 5.1 Authentication Request
 
-The Relying Party sends the Session Holder to the Authorization Endpoint with the following parameters in the query component, encoded as `application/x-www-form-urlencoded`:
+The Relying Party sends the Session Holder to the Authorization Endpoint with the following parameters, by `GET` in the query component or by `POST` as an `application/x-www-form-urlencoded` body; the Issuer MUST accept both (Section 3.1.2.1 of [OpenID.Core]):
 
 - `response_type`: REQUIRED. Value MUST be set to `code`.
 - `client_id`: REQUIRED. The Open Client's document URL or the Registered Client's identifier.
@@ -292,10 +298,11 @@ The Relying Party sends the Session Holder to the Authorization Endpoint with th
 - `state`: REQUIRED. Opaque value of at least N_ENTROPY, bound to the Session Holder's session at the Relying Party.
 - `nonce`: REQUIRED. Opaque value of at least N_ENTROPY, returned in the ID Token.
 - `code_challenge`, `code_challenge_method`: REQUIRED for every client. `code_challenge_method` MUST be `S256` [RFC7636].
+- `response_mode`: OPTIONAL. If present, MUST be `query`; other values MUST be rejected with `invalid_request`.
 - `prompt`: OPTIONAL. `consent` forces the review step (Section 6.4); `none` forbids interaction and fails the transaction as Section 6.3 step 10 states. Other values MUST be ignored.
 - `login_hint`: OPTIONAL. The Agent Handle expected to sign in. A Relay uses it to find the Home Issuer (Section 8).
 
-`max_age`, `claims`, `request` and `request_uri` MUST be ignored. Example:
+`request` and `request_uri` are not supported: a request carrying either MUST be rejected with `request_not_supported` or `request_uri_not_supported` (Sections 6.1, 6.2 and 3.1.2.6 of [OpenID.Core]). `claims`, `display`, `ui_locales`, `id_token_hint` and `acr_values` MUST be ignored. `max_age` does not alter processing, but the ID Token MUST then carry `auth_time` (Section 3.1). Example:
 
 ```
 GET /authorize?response_type=code
@@ -314,18 +321,20 @@ Accept: application/json
 The Issuer MUST:
 
 1. Resolve `client_id` to a Registered Client, or fetch and validate its Client ID Metadata Document (Section 4.2).
-2. Verify that `redirect_uri` exactly matches a registered or documented value. If it does not, the Issuer MUST NOT redirect and MUST answer `400` directly: with the JSON error body of Section 6.7 and `error` `invalid_request` when the request prefers `application/json` (Section 5.3), otherwise as HTML.
-3. Reject the request with `invalid_request` if `response_type`, `state`, `nonce`, `code_challenge` or `code_challenge_method` is missing or invalid, or if any parameter is repeated.
+2. Verify that `redirect_uri` matches a registered or documented value by simple string comparison; for a loopback IP literal URI registered by a Registered Client (`http://127.0.0.1:{port}/...` or `http://[::1]:{port}/...`) the port MAY differ (Section 7.3 of [RFC8252]; Section 4.1.3 of [RFC9700]). If it does not match, the Issuer MUST NOT redirect and MUST answer `400` directly: with the JSON error body of Section 6.7 and `error` `invalid_request` when the request prefers `application/json` (Section 5.3), otherwise as HTML.
+3. Reject the request with `invalid_request` if `state`, `nonce`, `code_challenge` or `code_challenge_method` is missing or invalid, or if any parameter is repeated, and with `unsupported_response_type` if `response_type` is not `code`. The Issuer MUST NOT reject `state` or `nonce` on length alone; N_ENTROPY binds the Relying Party.
 4. Reject with `invalid_scope` a scope the client's tier does not permit.
+
+If step 1 fails, the Issuer MUST NOT redirect and MUST answer `400` as in step 2 with `error` `invalid_request`. If step 3 or 4 fails after steps 1 and 2 succeeded, no transaction is created and the Issuer MUST respond per Section 4.1.2.1 of [RFC6749]: on the HTML path, `303` to `redirect_uri` with `error`, `error_description`, `state` when received, and `iss`; on the JSON path, `400` with the body of Section 6.7 extended by a `redirect` member holding that URL.
 
 ### 5.3 Transaction Creation and Session Binding
 
 On a valid request the Issuer creates a Sign-in Transaction (Section 6) with lifetime T_TXN and a transaction identifier of at least N_ENTROPY, and binds the Session Holder to it. The response depends on the request's `Accept` header, evaluated per Section 12.5.1 of [RFC9110]; an absent header or `*/*` is treated as `text/html`:
 
 - When `application/json` is the highest-weighted acceptable type and outranks `text/html`, the Issuer MUST respond `200` with the Transaction Resource (Section 6.1) including a `session_token`: a bearer credential of at least N_ENTROPY, bound to this transaction, that identifies the Session Holder; it is presented as `Authorization: Bearer {session_token}` on requests to the transaction's resources, including `GET` of the Transaction Resource and of the continue URL (Section 6.5).
-- Otherwise the Issuer MUST respond `303` to a wait page. The Issuer MUST bind the Session Holder with a session cookie (`Secure`, `HttpOnly`, `SameSite=Lax`, path limited to the Issuer's own resources) that identifies it in Section 6.5. The `200` response of the wait page MUST carry a `Link` header `<{url}>; rel="agent-login-transaction"` naming the Transaction Resource, and its HTML MUST contain `<script type="application/json" id="agent-login-transaction">` whose text is the Transaction Resource as of page generation, serialised with `<`, `>`, `&`, U+2028 and U+2029 escaped as `\u003c`, `\u003e`, `\u0026`, `\u2028` and `\u2029`. The wait page SHOULD poll the Transaction Resource and follow the continue step when the status becomes terminal.
+- Otherwise the Issuer MUST respond `303` to a wait page. The Issuer MUST bind the Session Holder with a session cookie (`Secure`, `HttpOnly`, `SameSite=Lax`, no `Domain` attribute, path limited to the Issuer's own resources) that identifies it in Section 6.5; the cookie is set only in this `303` response, and the Issuer MUST NOT bind a requester to the transaction on any later request. The `200` response of the wait page MUST carry a `Link` header `<{url}>; rel="agent-login-transaction"` naming the Transaction Resource, and its HTML MUST contain `<script type="application/json" id="agent-login-transaction">` whose text is the Transaction Resource as of page generation, serialised with `<`, `>`, `&`, U+2028 and U+2029 escaped as `\u003c`, `\u003e`, `\u0026`, `\u2028` and `\u2029`. Neither the embedded resource nor the resource named by the `Link` header includes `session_token`. The wait page SHOULD poll the Transaction Resource and follow the continue step when `next.action` becomes `continue`.
 
-Every HTML page the Issuer serves to a user agent, including wait, review and Owner approval pages, MUST be sent with a `Content-Security-Policy` that permits only the Issuer's own scripts and sets `frame-ancestors 'none'`. Client-supplied strings MUST be rendered as text, and `logo_uri`, `tos_uri` and `policy_uri` MUST be `https` URLs or MUST be dropped.
+Every HTML page the Issuer serves to a user agent, including wait, review and Owner approval pages, MUST be sent with a `Content-Security-Policy` whose `script-src` is the Issuer's own origin without `'unsafe-inline'` and which sets `object-src 'none'`, `base-uri 'none'` and `frame-ancestors 'none'`, and with `Referrer-Policy: no-referrer`. Client-supplied strings MUST be rendered as text, and `logo_uri`, `tos_uri` and `policy_uri` MUST be `https` URLs or MUST be dropped.
 
 ### 5.4 Successful Response
 
@@ -339,7 +348,7 @@ The Issuer SHOULD revoke tokens already issued for a code presented twice.
 
 ### 5.5 Error Response
 
-Errors are returned per Section 4.1.2.1 of [RFC6749] with `error`, OPTIONAL `error_description` and `error_uri`, `state` and `iss`, to a validated `redirect_uri` only, when the transaction's continue step is followed (Section 6.5). Error codes are those of [RFC6749], `interaction_required` and `consent_required` from Section 3.1.2.6 of [OpenID.Core], and:
+Errors are returned per Section 4.1.2.1 of [RFC6749] with `error`, OPTIONAL `error_description` and `error_uri`, `state` and `iss`, to a validated `redirect_uri` only, either directly (Section 5.2) or when the transaction's continue step is followed (Section 6.5). Error codes are those of [RFC6749], `interaction_required`, `consent_required`, `request_not_supported` and `request_uri_not_supported` from Section 3.1.2.6 of [OpenID.Core], and:
 
 - `signup_limit_reached`: the Owner's Agents have reached `max_signups_per_owner` at this client (Section 7.6).
 
@@ -356,35 +365,35 @@ Transaction outcomes map to errors as follows:
 
 ### 5.6 Token Request and Response
 
-The Relying Party presents `grant_type=authorization_code`, `code`, `redirect_uri`, `code_verifier` and, for an Open Client, `client_id`; a Registered Client authenticates per Section 4.3. The Issuer MUST verify that the code was issued to the authenticated Registered Client or to the presented Open Client `client_id` (Section 4.1.3 of [RFC6749]), that `redirect_uri` equals the request's, and that `code_verifier` matches the challenge; it MUST answer `invalid_grant` when any of these fails, when `code_verifier` is absent, or when the code is unknown, expired, used, or belongs to a transaction whose asserting key was revoked or whose Account was disabled (Sections 7.3, 7.4). The successful response is per Section 3.1.3.3 of [OpenID.Core] with `access_token`, `token_type` `Bearer`, `expires_in` (T_TOKEN), `id_token` and `scope`, all REQUIRED. The Issuer MUST NOT issue Refresh Tokens. The Access Token is opaque to the Relying Party and MUST be accepted only at the UserInfo Endpoint.
+The Relying Party presents `grant_type=authorization_code`, `code`, `redirect_uri`, `code_verifier` and, for an Open Client, `client_id`; a Registered Client authenticates per Section 4.3. The Issuer MUST verify that the code was issued to the authenticated Registered Client or to the presented Open Client `client_id` (Section 4.1.3 of [RFC6749]), that `redirect_uri` equals the request's, and that `code_verifier` matches the challenge; it MUST answer `invalid_grant` when any of these fails, when `code_verifier` is absent, or when the code is unknown, expired, used, or belongs to a transaction whose asserting key was revoked or expired, whose Agent was disabled or deleted, or whose Account was disabled (Sections 7.3, 7.4). Failed client authentication is answered with `401` `invalid_client` (Section 5.2 of [RFC6749]). The successful response is per Section 3.1.3.3 of [OpenID.Core] with `access_token`, `token_type` `Bearer`, `expires_in` (T_TOKEN), `id_token` and `scope`, all REQUIRED. The Issuer MUST NOT issue Refresh Tokens. The Access Token is opaque to the Relying Party and MUST be accepted only at the UserInfo Endpoint.
 
 ### 5.7 ID Token Validation
 
 The Relying Party MUST validate the response as follows:
 
 1. Verify that the redirect contains `iss` equal to the Issuer Identifier recorded for this `state` when the request was sent (Section 2.4 of [RFC9207]), that `state` equals the value bound to the session, and consume `state`. Send the Token Request only to that recorded Issuer's Token Endpoint.
-2. Verify the JWS signature with the key named by `kid` in the Issuer's JWK Set, refetching the JWK Set once when `kid` is unknown. `alg` MUST be in the Relying Party's configured set, which SHOULD be `ES256` alone or with `EdDSA`, and MUST match the key (Section 1.1).
+2. Verify the JWS signature with the key named by `kid` in the Issuer's JWK Set, refetching the JWK Set once when `kid` is unknown. `alg` MUST be in the Relying Party's configured set, which SHOULD be `ES256` alone or with `EdDSA`, and MUST match the key (Section 1.1) and equal the JWK's `alg` member when present (Section 4.4 of [RFC7517]). The Relying Party SHOULD rate-limit refetches triggered by unknown `kid` values.
 3. Verify that `iss` equals the recorded Issuer Identifier and `aud` equals the `client_id`.
 4. Verify that the current time is before `exp` and not more than T_SKEW before `iat`.
 5. Verify that `nonce` equals the request's value.
 6. Verify that `actor_type` equals `agent`.
-7. When `email` is present, verify the binding of Section 2.5, including the `home_iss` rule.
+7. When `email` or `home_iss` is present, verify the binding of Section 2.5.
 
 If any of the listed steps fail, the ID Token MUST be rejected.
 
 ### 5.8 Agent-Initiated Start
 
-To start from the Agent side, the Agent Client sends the Session Holder to the Relying Party's `initiate_login_uri` [OpenID.Registration] with `iss` and `login_hint` as defined in Section 4 of [OpenID.Core]. The Relying Party MUST verify that `iss` equals an Issuer it is configured to accept and MUST refuse the request with `400` otherwise, performing no discovery or fetch for an unconfigured `iss`; it then starts an Authentication Request to that Issuer carrying the same `login_hint` and records the Issuer for the `state` as Section 5.7 requires. Discovery of Relying Parties is out of scope (Section 1.4); see [RFC9728] and [auth.md].
+To start from the Agent side, the Agent Client sends the Session Holder to the Relying Party's `initiate_login_uri` [OpenID.Registration] with `iss` and `login_hint` as defined in Section 4 of [OpenID.Core]. The Relying Party MUST verify that `iss` equals an Issuer it is configured to accept and MUST refuse the request with `400` otherwise, performing no discovery or fetch for an unconfigured `iss`; it then starts an Authentication Request to that Issuer carrying the same `login_hint` and records the Issuer for the `state` as Section 5.7 requires. `target_link_uri`, if present, MUST be ignored or verified to point to the Relying Party's own origin before use, and `initiate_login_uri` MUST accept `GET` and `POST` (Section 4 of [OpenID.Core]). Discovery of Relying Parties is out of scope (Section 1.4); see [RFC9728] and [auth.md].
 
 ## 6. The Sign-in Transaction
 
-Every response in this section, including error responses for an existing transaction, MUST carry the current `status` and the `next` step. Requests from an Agent Client to the transaction endpoint carry no cookies and need no anti-forgery token: the assertion signature, the `transaction_token` and the `session_token` are its only authorities. The Session Holder bound under Section 5.3 additionally receives the continue URL (Section 6.5). Agent Clients MUST validate server certificates and MUST NOT follow a redirect from HTTPS to HTTP. An Issuer that supports browser-based Agent Clients on other origins MUST answer CORS preflight requests for the transaction and agents endpoints. Transaction identifiers MAY be logged; assertions, tokens, challenges and continue URLs MUST NOT be.
+Every response in this section, including error responses for an existing transaction, MUST carry the current `status` and the `next` step. Requests from an Agent Client to the transaction endpoint carry no cookies and need no anti-forgery token: the assertion signature, the `transaction_token` and the `session_token` are its only authorities. The Session Holder bound under Section 5.3 additionally receives the continue URL (Section 6.5). Agent Clients MUST validate server certificates and MUST NOT follow a redirect from HTTPS to HTTP. An Issuer that supports browser-based Agent Clients on other origins MUST answer CORS preflight requests for the transaction and agents endpoints and MUST NOT set `Access-Control-Allow-Credentials` to `true`. Transaction identifiers MAY be logged; assertions, tokens, challenges, continue URLs and, while its code is unredeemed, the redirect URL of Section 6.5 MUST NOT be logged, and an Agent Client MUST NOT place them in model prompts or tool output.
 
 ### 6.1 Transaction Resource
 
 `GET {transaction_endpoint}/{transaction_id}` with `Accept: application/json` returns:
 
-- `transaction_id`: REQUIRED. The identifier. Possession of it MUST grant nothing beyond reading this representation.
+- `transaction_id`: REQUIRED. The identifier. Possession of it alone MUST grant nothing beyond reading this representation (Section 10.1).
 - `iss`: REQUIRED. Issuer Identifier of the Issuer serving the transaction.
 - `url`: REQUIRED. Absolute HTTPS URL of this Transaction Resource.
 - `status`: REQUIRED. One of the values in Section 6.2.
@@ -393,13 +402,13 @@ Every response in this section, including error responses for an existing transa
 - `client`: REQUIRED. Object with `client_id`, `client_type` (`open` or `registered`), `redirect_host` (the host of the request's `redirect_uri`), and the client's `client_name`, `logo_uri`, `tos_uri` and `policy_uri` when known.
 - `requested_scopes`: REQUIRED. Array of scope values.
 - `disclosure`: REQUIRED. Array of objects `{scope, title, description}`, one per requested scope, describing what the client receives. It MUST NOT change during the transaction's lifetime.
-- `requester`: OPTIONAL. Object describing the Session Holder as seen by the Issuer: `user_agent` and `network` (a coarse network location), as strings.
+- `requester`: OPTIONAL. Object describing the Session Holder as seen by the Issuer: `user_agent` and `network` (a coarse network location), as strings. It is informative: both values are controlled by the Session Holder and MUST NOT decide `deliver_to_session`.
 - `challenge`: REQUIRED while `status` is `awaiting_agent` and `next.action` is `assert`. Opaque value of at least N_ENTROPY, single use.
 - `consent_reason`: REQUIRED while `status` is `awaiting_consent`. One of `first_visit`, `material_change`, `expired`, `prompt_consent`, `policy` (Section 6.4).
 - `login_hint`: OPTIONAL. The handle named in the Authentication Request.
 - `reason`: REQUIRED when `status` is `denied`. One of `cancelled`, `access_denied`, `key_revoked`, `owner_declined`, `consent_required`, `interaction_required`, `signup_limit_reached`.
 - `transaction_token`: present only in the response to a successful assertion (Section 6.3) or, at a Relay, as Section 8.4 describes.
-- `session_token`: present only in the `200` response of Section 5.3.
+- `session_token`: present only in the JSON `200` response of Section 5.3, never in a wait page; valid until T_RETAIN after the transaction becomes terminal.
 
 Members not understood MUST be ignored.
 
@@ -419,12 +428,12 @@ A terminal transaction MUST remain readable with `200` for at least T_RETAIN; th
 
 ### 6.3 Assertion
 
-Before asserting, the Agent Client MUST verify that the resource's `iss` equals the Home Issuer discovered for its handle (Section 2) and that `url` and `next.url` are under that Issuer's `transaction_endpoint`. It posts `{"assertion": "<JWS>"}` to the URL given for `assert` (Appendix A.4). The assertion and the enrollment proof of Section 7.2 are JWSs with the following contents:
+Before asserting, the Agent Client MUST verify that the resource's `iss` equals the Home Issuer discovered for its handle (Section 2) and that `url` and `next.url` are under that Issuer's `transaction_endpoint`. An Agent Client that reached the Authorization Endpoint from a Relying Party's sign-in page or `initiate_login_uri` MUST NOT assert when `client.redirect_host` is neither that Relying Party's host nor a host it is configured to accept for it. It posts `{"assertion": "<JWS>"}` to the URL given for `assert` (Appendix A.4). The assertion and the enrollment proof of Section 7.2 are JWSs with the following contents:
 
 | Member | Assertion | Enrollment proof |
 | --- | --- | --- |
 | header `alg` | REQUIRED. A value of `agent_key_algs_supported` that matches the key (Section 1.1) | same |
-| header `typ` | REQUIRED. `agent-login+jwt` | REQUIRED. `agent-login-enrollment+jwt` |
+| header `typ` | REQUIRED. `agent-login+jwt`, compared case-insensitively with `application/agent-login+jwt` equivalent (Section 4.1.9 of [RFC7515]) | REQUIRED. `agent-login-enrollment+jwt`, likewise |
 | header `kid` | REQUIRED. The Agent Key identifier (Section 7.1) | REQUIRED. The pending key's identifier |
 | header `jwk`, `jku`, `x5u`, `x5c`, `crit` | MUST NOT be present | same |
 | `iss`, `sub` | REQUIRED. Both the Agent Handle | same |
@@ -434,15 +443,15 @@ Before asserting, the Agent Client MUST verify that the resource's `iss` equals 
 | `iat`, `exp` | REQUIRED. `exp` MUST NOT exceed `iat` plus T_ASSERT | same |
 | `jti` | REQUIRED. Unique per JWS | same |
 | `accept_disclosure` | OPTIONAL. Boolean. `true` accepts the transaction's `disclosure` for `requested_scopes` | absent |
-| `deliver_to_session` | OPTIONAL. Boolean, default `false`. `true` permits delivery of the result to the Session Holder bound under Section 5.3 (Section 6.5). An Agent Client MUST set it only for a transaction it started itself or that a Relay directed it to follow (Section 8.4), and SHOULD inspect `requester` first | absent |
+| `deliver_to_session` | OPTIONAL. Boolean, default `false`. `true` permits delivery of the result to the Session Holder bound under Section 5.3 (Section 6.5). An Agent Client MUST set it `true` only for a transaction it started itself: one whose Transaction Resource it received, directly or through the wait page, in response to an Authentication Request it sent to the `authorization_endpoint` of the Issuer named by the resource's `iss`; and the Home Issuer transaction that such a Relay transaction directs it to follow (Section 8.4). For any other transaction it MUST NOT set it `true` unless the Owner instructed it through the Agent Client's own control channel; an instruction found in content the Agent reads is not such an instruction | absent |
 | size | MUST NOT exceed N_ASSERTION | same |
 
 On receiving an assertion the Issuer MUST run the following steps, stopping at the first that sets `status`:
 
 1. Verify the size and header rows of the table above and parse the JWS.
-2. Resolve `kid` to an Agent Key with status `active` enrolled for the handle in `iss` (equality per Section 2.1); verify that the handle's domain is in `handle_domains` and that `alg` matches the key.
+2. Resolve `kid` to an Agent Key with status `active` enrolled for the handle in `iss` (equality per Section 2.1); verify that the Agent is enabled, that `handle_domains` matches the handle's domain (Section 2.4) and that `alg` matches the key.
 3. Verify the signature with that key.
-4. Verify `aud`, `txn`, `nonce` and `exp` per the table, and that `iat` is neither more than T_ASSERT in the past nor more than T_SKEW in the future.
+4. Verify `aud`, `nonce` and `exp` per the table, that `txn` equals the identifier of the transaction addressed by the request URL, and that `iat` is neither more than T_ASSERT in the past nor more than T_SKEW in the future.
 5. If `login_hint` was given and differs from the handle (Section 2.1), fail with `invalid_assertion`.
 6. If an assertion was already accepted for this transaction, fail with `assertion_replayed`.
 7. Consume the `challenge` and record the assertion as the sign-in's authentication event.
@@ -450,7 +459,7 @@ On receiving an assertion the Issuer MUST run the following steps, stopping at t
 9. If no Account exists and the Owner's count at this client is not below `max_signups_per_owner` (Section 7.6), set `status` to `denied` with `reason` `signup_limit_reached`.
 10. Determine the outstanding gates: an Owner approval is outstanding when the request includes `owner_profile` or `owner_email` and the key lacks the `share_owner` permission (Section 7.1), the approval being given under Section 6.6; a review is outstanding when Section 6.4 requires one and `accept_disclosure` is not `true`, or when `accept_disclosure` is `true` but Section 6.4 requires a review for a reason other than the Consent Record. If `prompt` was `none` and a review is outstanding, set `status` to `denied` with `reason` `consent_required`; if `prompt` was `none` and an Owner approval is outstanding, set `status` to `denied` with `reason` `interaction_required`. Otherwise, if `accept_disclosure` is `true` and no review is outstanding, create or renew the Consent Record; then set `status` to `awaiting_owner` if an Owner approval is outstanding, else to `awaiting_consent` if a review is outstanding, else to `ready`.
 
-If any of steps 1 to 6 fails, the assertion MUST be rejected with the matching error of Section 6.7, and neither `status` nor `challenge` changes. Otherwise the Issuer answers `200` with the Transaction Resource including `transaction_token`: a bearer credential of at least N_ENTROPY, bound to this transaction and this key, returned once in this response, valid until the key is revoked or until T_RETAIN after the transaction becomes terminal, and presented as `Authorization: Bearer {transaction_token}` on later requests to the transaction's resources, including `GET` of the Transaction Resource and of the continue URL.
+Steps 6 and 7 MUST be performed atomically with respect to other assertions for the same transaction. If any of steps 1 to 6 fails, the assertion MUST be rejected with the matching error of Section 6.7, and neither `status` nor `challenge` changes. Otherwise the Issuer answers `200` with the Transaction Resource including `transaction_token`: a bearer credential of at least N_ENTROPY, bound to this transaction and this key, returned once in this response, valid until the key is revoked or until T_RETAIN after the transaction becomes terminal, and presented as `Authorization: Bearer {transaction_token}` on later requests to the transaction's resources, including `GET` of the Transaction Resource and of the continue URL.
 
 ### 6.4 Review and Consent
 
@@ -462,30 +471,30 @@ A Consent Record stores the handle, the `client_id`, the granted scopes, the cli
 - the request carried `prompt=consent`: `prompt_consent`;
 - the client's `require_review` is `true`, or Issuer policy requires it: `policy`.
 
-To decide, the Agent Client posts `{"decision": "allow"}` or `{"decision": "deny"}` to the URL given for `review` with `Authorization: Bearer {transaction_token}`; the session binding of Section 5.3 MUST NOT authorise this step. `allow` creates or renews the Consent Record and sets `status` to `awaiting_owner` if an Owner approval is still outstanding, else `ready`; `deny` sets `status` to `denied` with `reason` `cancelled`. The Issuer answers `200` with the Transaction Resource.
+To decide, the Agent Client posts `{"decision": "allow"}` or `{"decision": "deny"}` to the URL given for `review` with `Authorization: Bearer {transaction_token}`; the session binding of Section 5.3 MUST NOT authorise this step. `allow` creates or renews the Consent Record and sets `status` to `awaiting_owner` if an Owner approval is still outstanding, else `ready`; `deny` sets `status` to `denied` with `reason` `cancelled`. The Issuer answers `200` with the Transaction Resource. A decision posted while `status` is not `awaiting_consent` MUST be refused with `invalid_request` (400), or `transaction_expired` (410) for a terminal transaction, and MUST NOT change the Consent Record. A Consent Record unused for T_CONSENT MUST be deleted.
 
 ### 6.5 Completion
 
-When `status` is `ready`, `denied` or `expired`, `next.url` is a continue URL containing at least N_ENTROPY. The Issuer MUST return it to a requester presenting the `transaction_token`, and to the Session Holder (session cookie or `session_token`) only if the accepted assertion carried `deliver_to_session` `true`; to any other requester the Issuer returns `next.action` `continue` without `url`. A `GET` of the continue URL with `Accept: text/html` (or no `Accept`, or `*/*`) answers `302` to the Relying Party's `redirect_uri` with the parameters of Section 5.4 or 5.5; with `Accept: application/json` it answers `200` with `{"redirect": "<that URL>"}`. For `ready` the Issuer issues the code exactly once and sets `status` to `completed`; a second request answers `410`. For `denied` and `expired` the continue URL MAY be followed more than once. The continue URL is followed with the credential that released it; a request without a valid one answers `401` `invalid_token`.
+When `status` is `ready`, `denied` or `expired`, `next.url` is a continue URL containing at least N_ENTROPY. The Issuer MUST return it to a requester presenting the `transaction_token`, and to the Session Holder (session cookie or `session_token`) only if the accepted assertion carried `deliver_to_session` `true`; to any other requester the Issuer returns `next.action` `continue` without `url`. A `GET` of the continue URL answers, when the request prefers HTML (evaluated as in Section 5.3), `303` to the Relying Party's `redirect_uri` with the parameters of Section 5.4 or 5.5, and otherwise `200` with `{"redirect": "<that URL>"}`. For `ready` the Issuer issues the code exactly once, atomically with respect to concurrent requests, and sets `status` to `completed`; a second request answers `410`. For `denied` and `expired` the continue URL MAY be followed more than once. The continue URL is followed with the credential that released it; a request without a valid one answers `401` `invalid_token`. An Agent Client whose accepted assertion carried `deliver_to_session` `true` MUST NOT follow the continue URL, and one that follows the `303` MUST NOT forward its `Authorization` header to the Relying Party.
 
 ### 6.6 Owner Approval
 
-When `status` is `awaiting_owner`, the Issuer notifies the Owner by a means of its choosing. The approval or refusal MUST be given within a session in which the Owner authenticated by a method of Section 7.5; a link or code delivered to a mailbox or to any channel readable by the Agent MUST NOT by itself approve. The approval page MUST show the client, including its `redirect_host`, the requested Owner Claims and the Agent Handle. Approval sets `status` to `awaiting_consent` if a review is still outstanding, else `ready`; refusal sets `status` to `denied` with `reason` `owner_declined`. While `status` is `awaiting_owner` the Issuer MAY extend `expires_at` up to T_OWNER after creation; the Agent Client MUST re-read it on every poll. The Issuer MUST NOT issue a token that omits an Owner Claim the client requested.
+When `status` is `awaiting_owner`, the Issuer notifies the Owner by a means of its choosing. The approval or refusal MUST be given within a session in which the Owner authenticated by `passkey`, `oidc` or `domain` (Section 7.5), or by `email` together with a factor not delivered to a mailbox or to any other channel readable by the Agent; a session established by a one-time code or link alone MUST NOT approve. The approval page MUST show the client, including its `redirect_host`, the requested Owner Claims and the Agent Handle; when the client registered `relay_issuer` (Section 4.4), the page MUST say that the client is a Relay and that the Owner Claims will be forwarded to Relying Parties of that Relay under its `op_policy_uri`. Approval sets `status` to `awaiting_consent` if a review is still outstanding, else `ready`; refusal sets `status` to `denied` with `reason` `owner_declined`. While `status` is `awaiting_owner` the Issuer MAY extend `expires_at` up to T_OWNER after creation; the Agent Client MUST re-read it on every poll. The Issuer MUST NOT issue a token that omits an Owner Claim the client requested.
 
 ### 6.7 Transaction Errors
 
-Errors are returned with an HTTP status and a JSON body `{error, error_description, status, next}`, where `error` is REQUIRED, `error_description` OPTIONAL, and `status` and `next` are present whenever the transaction exists:
+Errors are returned with an HTTP status and a JSON body `{error, error_description, status, next}`, where `error` is REQUIRED, `error_description` OPTIONAL, and `status` and `next` are present whenever the transaction exists; `next` is subject to Section 6.5, so `url` is omitted from a `continue` step unless the requester presented a credential that releases it:
 
 - `invalid_request` (400): malformed body or parameters.
 - `invalid_transaction` (404): unknown transaction identifier, or a terminal transaction the Issuer no longer retains.
 - `transaction_expired` (410): an assertion or decision was posted to, or a `ready` continue URL was followed for, a terminal transaction (a `GET` still answers `200`, Section 6.2).
 - `invalid_assertion` (400): the assertion fails step 1, 4 or 5 of Section 6.3, or its `alg` does not match the key (step 2); also an enrollment proof failing the checks of Section 7.2, in which case `status` and `next` are absent.
-- `unknown_key` (401): `kid` resolves to no enrolled key for the handle, or the handle's domain is not served.
+- `unknown_key` (401): `kid` resolves to no enrolled key for the handle, the handle's domain is not served, or the Agent is disabled or deleted.
 - `key_revoked` (401): the key exists but is not `active`.
 - `invalid_signature` (401): the signature does not verify.
 - `assertion_replayed` (409): the transaction already accepted an assertion.
 - `invalid_token` (401): the `transaction_token` or `session_token` is missing, wrong or no longer valid.
-- `rate_limited` (429): the requester exceeded the Issuer's limits; `Retry-After` MUST be present. An Issuer SHOULD limit transactions per client and per source address and SHOULD throttle repeated invalid assertions for one transaction.
+- `rate_limited` (429): the requester exceeded the Issuer's limits; `Retry-After` MUST be present. An Issuer SHOULD limit transactions per client and per source address and SHOULD throttle repeated invalid assertions for one transaction, and SHOULD limit the number of transactions concurrently `awaiting_owner` per Agent and per client.
 
 ## 7. Agents, Keys, Owners and Caps
 
@@ -504,13 +513,13 @@ A key whose `expires_at` has passed MUST be treated as not `active`. An Agent MA
 
 ### 7.2 Key Enrollment
 
-`POST {agents_endpoint}/{handle}/keys` with body `{jwk, name, expires_at}` creates a `pending` key. The Issuer MUST reject a `jwk` with any member other than `kty`, `crv`, `x` and (for P-256) `y`, whose `kty` and `crv` are inconsistent, whose curve is not supported, whose point is not on the curve, or, for Ed25519, whose point is the identity or of small order; and MUST reject a public key previously revoked for this handle. `permissions` in the body are ignored; `share_owner` is granted only by the update operation of Section 7.8 with an Owner Credential. The response is `201` with the key record plus `challenge` (at least N_ENTROPY, single use, valid for T_ASSERT) and `proof_url`, an absolute HTTPS URL at the Issuer.
+`POST {agents_endpoint}/{handle}/keys` with body `{jwk, name, expires_at}` creates a `pending` key. The Issuer MUST reject a `jwk` with any member other than `kty`, `crv`, `x` and (for P-256) `y`, whose `kty` and `crv` are inconsistent, whose curve is not supported, whose `x` and `y` (P-256) or `x` (Ed25519) do not decode to exactly 32 octets, whose P-256 coordinates are not less than the field prime, whose Ed25519 encoding is not canonical, whose point is not on the curve, or, for Ed25519, whose point is the identity or of small order; MUST compare public keys by the decoded point; MUST reject a key previously revoked for this handle or already enrolled (`pending` or `active`) for it; and SHOULD limit `pending` keys per handle (`rate_limited`). `permissions` in the body are ignored; `share_owner` is granted only by the update operation of Section 7.8 with an Owner Credential. The response is `201` with the key record plus `challenge` (at least N_ENTROPY, single use, valid for T_ASSERT) and `proof_url`, an absolute HTTPS URL at the Issuer.
 
 The Agent Client then posts `{"proof": "<JWS>"}` to `proof_url`; this request needs no credential. The Issuer MUST verify the proof against the Enrollment proof column of the table in Section 6.3, with the signature verified by the pending key's `jwk` and no other key, `iss` and `sub` equal to the handle in the path, `nonce` equal to this key's unconsumed `challenge`, and `iat` checked as in Section 6.3 step 4. On success the Issuer sets `status` to `active` and answers `200` with the key record; on failure it answers with the matching error of Section 6.7. A `pending` key not proved within T_ASSERT MUST be deleted.
 
 ### 7.3 Key Revocation
 
-Revoking a key (Section 7.8) takes effect immediately as the table in Section 7.4 states, and MUST NOT delete Consent Records or Accounts. An Issuer SHOULD offer the Owner one operation that revokes every key of every Agent of that Owner. An Issuer MAY additionally send OpenID Connect Back-Channel Logout [OpenID.BackChannel] or Shared Signals events [OpenID.SSF] to Relying Parties that registered for them.
+Revoking a key (Section 7.8) takes effect immediately as the table in Section 7.4 states, and MUST NOT delete Consent Records or Accounts. `DELETE .../{handle}/keys` revokes every `pending` and `active` key of the handle and, when performed with an Owner Credential, MUST also invalidate every Delegated Credential derived for that handle. An Issuer SHOULD offer the Owner one operation that revokes every key of every Agent of that Owner with the same effects, and SHOULD notify the Owner of every key enrolled with a Delegated Credential. An Issuer MAY additionally send OpenID Connect Back-Channel Logout [OpenID.BackChannel] or Shared Signals events [OpenID.SSF] to Relying Parties that registered for them.
 
 ### 7.4 Accounts
 
@@ -520,6 +529,10 @@ An Account is created at the first `completed` transaction for (Agent, `client_i
 | --- | --- | --- | --- | --- | --- |
 | Key revoked or expired | those it asserted: `denied`, `key_revoked`; assertions and proofs with it refused (`key_revoked`) | refused | `invalid_grant` (Section 5.6) | invalidated (Section 3.3) | unchanged |
 | Account disabled | those for the pair past step 7 of Section 6.3: `denied`, `access_denied` | `denied`, `access_denied` (step 8) | `invalid_grant` | invalidated (Section 3.3) | Account `disabled`; Consent Record unchanged |
+| Agent disabled | those it asserted: `denied`, `access_denied` | refused (`unknown_key`) | `invalid_grant` | invalidated (Section 3.3) | unchanged |
+| Agent deleted | as disabled | as disabled | as disabled | as disabled | deleted; the count of Section 7.6 is retained |
+
+Consent Records and Accounts belong to the Agent, not to the handle; an Agent created later with the same handle starts with none. Deleting an Owner deletes every Agent of that Owner.
 
 ### 7.5 Owner Verification
 
@@ -530,19 +543,19 @@ Before issuing any Owner Claim, the Issuer MUST have verified the Owner by at le
 - `domain`: the Owner proved control of the domain of `owner_email` by DNS or a well-known resource.
 - `passkey`: the Owner authenticated with a WebAuthn credential [WebAuthn] registered after one of the methods above.
 
-For an organisation (Section 1.2), `owner_name` and `owner_email` identify its designated contact.
+For an organisation (Section 1.2), `owner_name` and `owner_email` identify its designated contact. An Issuer MUST support at least one method other than `email` for the sessions Section 6.6 requires; `email` alone remains sufficient for `owner_verified_via`.
 
 ### 7.6 Per-Owner Sign-up Caps
 
-A client MAY set `max_signups_per_owner` (Section 4.4). The Issuer counts, per (Owner, `client_id`), every Account ever created, including disabled and deleted Accounts, plus transactions that passed step 9 of Section 6.3 and are not yet terminal.
+A client MAY set `max_signups_per_owner` (Section 4.4). The Issuer counts, per (Owner, `client_id`), every Account ever created, including disabled and deleted Accounts, plus transactions that passed step 9 of Section 6.3 and are not yet terminal. The count MUST survive deletion of the Owner's Agents and of the Owner; an Owner who re-verifies an `owner_email` previously verified at the Issuer inherits the count for that address.
 
 ### 7.7 Issuer Signing Keys and Rotation
 
-The Issuer MUST publish its signing keys as a JWK Set at `jwks_uri`; each key MUST carry a stable `kid`, `use` `sig` and `alg`. To rotate, the Issuer MUST publish the new key before signing with it and MUST keep the previous key in the JWK Set for at least T_TOKEN plus the longest cache lifetime it allows on the JWK Set response. One active signing key per algorithm is RECOMMENDED. Signing keys SHOULD be held in a hardware security module or key management service from which they cannot be exported.
+The Issuer MUST publish its signing keys as a JWK Set at `jwks_uri`; each key MUST carry a stable `kid`, `use` `sig` and `alg`. To rotate, the Issuer MUST publish the new key before signing with it and MUST keep the previous key in the JWK Set for at least T_TOKEN plus the longest cache lifetime it allows on the JWK Set response. A key known or suspected to be compromised MUST be removed at once, notwithstanding the retention rule (Section 10.1.1 of [OpenID.Core]). One active signing key per algorithm is RECOMMENDED. Signing keys SHOULD be held in a hardware security module or key management service from which they cannot be exported.
 
 ### 7.8 Management Operations
 
-Resources are served under `agents_endpoint`; `{handle}` and `{client_id}` in paths are percent-encoded. Every operation requires `Authorization: Bearer` with an Owner Credential of the Owner of the handle in the path, or a Delegated Credential where marked delegable; the Issuer MUST verify that relationship on every request, MUST answer `401` with `WWW-Authenticate: Bearer error="invalid_token"` [RFC6750] for a missing or invalid credential, `403` `insufficient_permission` for a Delegated Credential on a non-delegable operation, and `404` for a handle that does not exist or does not belong to the credential's Owner.
+Resources are served under `agents_endpoint`; `{handle}` and `{client_id}` in paths are percent-encoded. Every operation requires `Authorization: Bearer` with an Owner Credential of the Owner of the handle in the path or, where marked delegable, a Delegated Credential derived for that handle; the Issuer MUST verify that relationship on every request, MUST answer `401` with `WWW-Authenticate: Bearer error="invalid_token"` [RFC6750] for a missing or invalid credential, `403` with `WWW-Authenticate: Bearer error="insufficient_scope"` and body `error` `insufficient_permission`, changing nothing, for a Delegated Credential on an operation or part of one that is not delegable, and `404` for a handle that does not exist, does not belong to the credential's Owner, or is not the handle the Delegated Credential was derived for. An Owner Credential obtained in a session that does not satisfy Section 6.6 MUST NOT grant `share_owner`.
 
 | Operation | Method and path | Body | Success | Delegable |
 | --- | --- | --- | --- | --- |
@@ -554,7 +567,7 @@ Resources are served under `agents_endpoint`; `{handle}` and `{client_id}` in pa
 | Revoke key | `DELETE .../{handle}/keys/{kid}` | | `204` | yes |
 | Revoke all keys | `DELETE .../{handle}/keys` | | `204` | yes |
 | List accounts | `GET .../{handle}/accounts` | | `200` `{"accounts": [...]}` | yes |
-| Set account status | `PATCH .../{handle}/accounts/{client_id}` | `{"status": "enabled"\|"disabled"}` | `200` account record | yes |
+| Set account status | `PATCH .../{handle}/accounts/{client_id}` | `{"status": "enabled"\|"disabled"}` | `200` account record | `disabled` only |
 | Revoke consent | `DELETE .../{handle}/consents/{client_id}` | | `204` | yes |
 
 Revoking a consent deletes the Consent Record and MUST NOT affect keys or Accounts.
@@ -563,11 +576,11 @@ Revoking a consent deletes the Consent Record and MUST NOT affect keys or Accoun
 
 ### 8.1 Purpose
 
-A Relay is an Issuer for Relying Parties whose software can configure only one Issuer. It authenticates the Agent at the Agent's Home Issuer and issues its own ID Token. A Relay MUST conform to every requirement on an Issuer except as this section states; Section 2.4 gives its metadata.
+A Relay is an Issuer for Relying Parties whose software can configure only one Issuer. It authenticates the Agent at the Agent's Home Issuer and issues its own ID Token. A Relay MUST conform to every requirement on an Issuer except as this section states; Section 2.4 gives its metadata. A Relying Party that configures a Relay trusts it as fully as an Issuer: a dishonest Relay can issue a token for any Agent of any accepted Home Issuer without consulting it; Section 2.5 detects an inconsistent `home_iss`, not an unconsulted one.
 
 ### 8.2 Upstream Authentication
 
-On an Authentication Request the Relay MUST obtain the handle from `login_hint` or through the `identify` step of Section 8.4, perform discovery (Section 2), refuse a Home Issuer that is not accepted by `home_issuers` or whose metadata lacks a REQUIRED member of Section 2.4, and run an Authentication Request of its own against the Home Issuer on the JSON path of Section 5.3, with its own `redirect_uri`, `state`, `nonce` and PKCE, binding the upstream `state` to its transaction and keeping the upstream `session_token`. The Relay MUST request `profile` upstream on every request and MUST request the Owner scopes only when the Relying Party requested them; a Relay that is not a Registered Client at the Home Issuer MUST fail a request containing `owner_profile` or `owner_email` with `invalid_scope` before contacting the Home Issuer. The Relay MUST validate the upstream ID Token per Section 5.7, including Section 2.5. The Relay MUST NOT set `max_signups_per_owner` in its own client metadata at a Home Issuer; it enforces Section 7.6 itself per (Owner, Relying Party `client_id`), identifying the Owner by (`home_iss`, upstream `owner_sub`).
+On an Authentication Request the Relay MUST obtain the handle from `login_hint` or through the `identify` step of Section 8.4, perform discovery (Section 2), refuse a Home Issuer that is not accepted by `home_issuers` or whose metadata lacks a REQUIRED member of Section 2.4, and run an Authentication Request of its own against the Home Issuer on the JSON path of Section 5.3, with its own `redirect_uri`, `state`, `nonce` and PKCE, with `login_hint` set to the handle and with `prompt=none` when the Relying Party sent it, binding the upstream `state` to its transaction and keeping the upstream `session_token`. The host of the Relay's `redirect_uri` at every Home Issuer MUST be the host of the Relay's Issuer Identifier, and a Relay registering at a Home Issuer MUST state `relay_issuer` (Section 4.4). The Relay MUST request `email` and `profile` upstream on every request and MUST request the Owner scopes only when the Relying Party requested them; a Relay that is not a Registered Client at the Home Issuer MUST fail a request containing `owner_profile` or `owner_email` with `invalid_scope` before contacting the Home Issuer. The Relay MUST validate the upstream ID Token per Section 5.7, including Section 2.5, and MUST verify that its `email` equals the handle obtained for the transaction (Section 2.1). The Relay MUST NOT set `max_signups_per_owner` in its own client metadata at a Home Issuer; it enforces Section 7.6 itself per (Owner, Relying Party `client_id`), identifying the Owner by (`home_iss`, upstream `owner_sub`).
 
 ### 8.3 Derived Subjects and Claim Mapping
 
@@ -577,20 +590,21 @@ The Relay MUST derive `sub` as `base64url(SHA-256("agent-login-sub|" || home_iss
 | --- | --- |
 | `iss` | the Relay's Issuer Identifier |
 | `home_iss` | the Home Issuer's Issuer Identifier |
-| `email`, `email_verified`, `actor_type` | copied from the upstream ID Token |
+| `actor_type` | copied from the upstream ID Token |
+| `email`, `email_verified` | copied from the upstream ID Token when the Relying Party requested `email` |
 | `name`, `preferred_username`, `owner_sub` | copied or derived; omitted unless the Relying Party requested `profile` |
 | `owner_name`, `owner_email`, `owner_email_verified`, `owner_verified_via` | copied only when the Home Issuer delivered them |
 | `exp` | no later than the upstream token's `exp` |
 
 ### 8.4 Transaction Hand-off
 
-The Relay's Transaction Resource MUST report `status` `awaiting_agent` with `next.action` `identify` when the handle is unknown: the Agent Client posts `{"handle": "scout@example.com"}` to `next.url` without credentials; the Relay MUST accept at most one such request per transaction, MUST validate it per Section 2.1 and perform discovery, and MUST rate-limit `identify` per source. Once the handle is known the Relay MUST report `next.action` `follow` with `next.url` equal to the `url` of the Home Issuer's Transaction Resource and `retry_after` set. The Agent Client applies the checks of Section 6.3 to `next.url`, MUST assert there with `deliver_to_session` `true`, and then polls the Relay's Transaction Resource.
+The Relay's Transaction Resource MUST report `status` `awaiting_agent` with `next.action` `identify` when the handle is unknown: the Agent Client posts `{"handle": "scout@example.com"}` to `next.url` without credentials; the Relay MUST accept at most one such request per transaction, MUST validate it per Section 2.1 and perform discovery, and MUST rate-limit `identify` per source. Once the handle is known the Relay MUST report `next.action` `follow` with `next.url` equal to the `url` of the Home Issuer's Transaction Resource and `retry_after` set. An Agent Client MUST act on a `follow` step only for a Relay transaction it started itself (Section 6.3) and MUST NOT otherwise assert on the Home Issuer's transaction. It applies the checks of Section 6.3 to the Home Issuer's Transaction Resource, MUST verify that its `client.redirect_host` equals the host of the Relay's Issuer Identifier, asserts with `deliver_to_session` `true`, and then polls the Relay's Transaction Resource.
 
-The Relay polls the Home Issuer's Transaction Resource with its upstream `session_token`; when the upstream `status` is `ready` it follows the continue step with `Accept: application/json`, exchanges the code (Section 5.6), validates the token (Section 8.2), applies Section 7.6, and evaluates its own Consent Record for (Agent, Relying Party `client_id`, scopes), which the Home Issuer's Consent Record for the Relay never replaces. It then sets its own `status` to `awaiting_consent` or `ready` and, on the next `GET` by the holder of its session binding, returns a `transaction_token` for its transaction; that token authorises the Relay's `review` and `continue` steps. The Relay's disclosure MUST state that the Owner's identity, when requested, is forwarded to the named Relying Party, and the Relay MUST NOT forward Owner Claims unless its own Consent Record covers the Owner scopes. An upstream `denied` or `expired` sets the same `status` and `reason` on the Relay's transaction.
+The Relay polls the Home Issuer's Transaction Resource with its upstream `session_token`; when the upstream `status` is `ready` it follows the continue step with `Accept: application/json`, exchanges the code (Section 5.6), validates the token (Section 8.2), applies Section 7.6, counting as in flight its own transactions that passed this check and are not yet terminal, and evaluates its own Consent Record for (Agent, Relying Party `client_id`, scopes), which the Home Issuer's Consent Record for the Relay never replaces. It then sets its own `status` to `awaiting_consent` or `ready` and, on the next `GET` by the holder of its session binding, returns once a `transaction_token` bound to the Relay's transaction; as an exception to Section 6.4, that token is issued to the session binding because the Relay accepts no assertion, and it authorises the Relay's `review` and `continue` steps. For every terminal outcome the Relay MUST release its continue URL to its session binding as if an accepted assertion had carried `deliver_to_session` `true`. The Relay's disclosure MUST state that the Owner's identity, when requested, is forwarded to the named Relying Party, and the Relay MUST NOT forward Owner Claims unless its own Consent Record covers the Owner scopes. An upstream `denied` or `expired` sets the same `status` and `reason` on the Relay's transaction.
 
 ### 8.5 Relay Policy
 
-A Relay MAY apply per-Home-Issuer caps and rate limits, and SHOULD retain transaction records no longer than abuse handling needs. A Relay MAY retain the upstream Access Token for no longer than the lifetime of the Access Token it issued, solely to evaluate live state, and MUST then discard it; it MUST NOT retain upstream ID Tokens after validation. The Relay's UserInfo Endpoint MUST call the Home Issuer's UserInfo Endpoint on every request and MUST answer `401` `invalid_token` when the upstream answers `401` or the upstream Access Token has expired.
+A Relay MAY apply per-Home-Issuer caps and rate limits, and SHOULD retain transaction records no longer than abuse handling needs. A Relay MUST retain the upstream Access Token until the Access Token it issued expires, solely to evaluate live state, and MUST then discard it; the `expires_in` of the Relay's Access Token MUST NOT exceed the upstream Access Token's remaining lifetime, and the Relay MUST NOT retain upstream ID Tokens after validation. Before issuing a code (Section 6.5) and before answering a Token Request (Section 5.6) the Relay MUST call the Home Issuer's UserInfo Endpoint and, on `401`, MUST set `denied` with `reason` `key_revoked` or answer `invalid_grant` respectively; its own UserInfo Endpoint MUST call the Home Issuer's on every request and MUST answer `401` `invalid_token` when the upstream does.
 
 ## 9. Relying Party Requirements
 
@@ -605,7 +619,8 @@ A Relying Party MUST:
 7. Present `access_denied` and `signup_limit_reached` as distinct outcomes, and never render `error_description` without escaping.
 8. Not log ID Tokens or Access Tokens, and store Owner data separately from Agent data.
 9. Perform discovery only for handles presented to it, and cache results per Section 2.2.
-10. To accept Agents from several Issuers, either perform discovery per handle against an allow-list or per-Issuer limits, or configure one Relay (Section 8).
+10. To accept Agents from several Issuers, either perform discovery per handle against an allow-list or per-Issuer limits, or configure one Relay (Section 8), but not both a Relay and a Home Issuer it relays, since Section 7.6 would then be counted twice.
+11. Send `login_hint` when the expected handle is known (Section 10.1).
 
 ## 10. Security Considerations
 
@@ -613,7 +628,7 @@ This specification inherits the security considerations of Section 10 of [RFC674
 
 ### 10.1 Transaction Fixation
 
-An attacker can start a transaction in its own browser and induce an Agent to assert on it, for example by sending the wait page's identifier with a plausible story; the disclosure names the genuine Relying Party, so the Agent sees nothing wrong. If the attacker's bound session could then follow the continue step, the attacker would hold a Relying Party session as the Agent (compare Section 5.4 of [RFC8628]). Section 6.5 therefore releases the result to the Session Holder only when the assertion carries `deliver_to_session`, which the Agent Client sets only for transactions it chose (Section 6.3), and Section 6.1 lets the Issuer describe the requester. The transaction identifier and the wait page are not secrets (Section 6).
+An attacker can start a transaction in its own browser and induce an Agent to assert on it, for example by sending the wait page's identifier with a plausible story; the disclosure names the genuine Relying Party, so the Agent sees nothing wrong. If the attacker's bound session could then follow the continue step, the attacker would hold a Relying Party session as the Agent (compare Section 5.4 of [RFC8628]). Section 6.5 therefore releases the result to the Session Holder only when the assertion carries `deliver_to_session`, which the Agent Client sets only for transactions it started itself as Section 6.3 defines; through a Relay it follows a `follow` step only for a Relay transaction it started, and only to a Home Issuer transaction whose client redirects to the Relay's host (Section 8.4), so a `follow` cannot divert an assertion to a transaction another party holds. The transaction identifier is not a credential (Section 6.1), but its holder can read the resource and, absent `login_hint`, complete the transaction with another Agent and deliver that sign-in to the Session Holder; a Relying Party that knows the expected handle SHOULD send `login_hint` (Section 9).
 
 ### 10.2 Assertion Replay and Cross-Issuer Use
 
@@ -621,7 +636,7 @@ An assertion is bound to one Issuer by `aud`, to one transaction by `txn`, to on
 
 ### 10.3 Key Compromise and Revocation Latency
 
-Revocation stops new sign-ins, voids unredeemed codes and invalidates outstanding Access Tokens at once, but it cannot reach sessions a Relying Party has already issued. The T_TOKEN lifetime bounds the window in which a Relying Party acting on the token alone remains unaware; Section 9 requires a UserInfo re-check before lasting actions. Section 7.2 refuses re-enrollment of a revoked public key so that revocation cannot be undone by re-enrollment.
+Revocation stops new sign-ins, voids unredeemed codes and invalidates outstanding Access Tokens at once, but it cannot reach sessions a Relying Party has already issued. The T_TOKEN lifetime bounds the window in which a Relying Party acting on the token alone remains unaware; Section 9 requires a UserInfo re-check before lasting actions. Section 7.2 refuses re-enrollment of a revoked public key so that revocation cannot be undone by re-enrollment, and Section 7.3 ties the invalidation of Delegated Credentials to the Owner's revocation of all keys, since a Delegated Credential held by a compromised Agent would otherwise re-enroll.
 
 ### 10.4 Issuer Impersonation and Handle Binding
 
@@ -633,7 +648,7 @@ The `iss` parameter on the redirect [RFC9207], the per-`state` record of the Iss
 
 ### 10.6 Open Client Impersonation and Server-Side Request Forgery
 
-An Open Client is trusted only as far as its document URL. Section 4.2 requires the Issuer to fetch the document under the protections of Section 2.2, and Section 6.1 shows the redirect URI's host as `client.redirect_host` so the Agent sees who is asking. Owner personal data is withheld from Open Clients because their operator is unverified. The same fetch protections apply to WebFinger, metadata and JWK Set fetches, whose targets are chosen by whoever supplies a handle.
+An Open Client is trusted only as far as its document URL. Section 4.2 requires the Issuer to fetch the document under the protections of Section 2.2, and Section 6.1 shows the redirect URI's host as `client.redirect_host` so the Agent sees who is asking. Owner personal data is withheld from Open Clients because their operator is unverified. The same protections apply to every request a Relying Party or Relay sends to an endpoint learned through discovery, including the Token and UserInfo Endpoints, whose targets are chosen by whoever supplies a handle.
 
 ### 10.7 Limits of Owner Attribution
 
@@ -641,7 +656,7 @@ A token proves which Agent signed in and, through the Owner Claims, which verifi
 
 ### 10.8 Sign-up Abuse and Enumeration
 
-Free identities attract automated sign-up farms. Per-owner caps (Section 7.6, whose count includes deleted Accounts and in-flight transactions so that deletion or racing does not free capacity) and Owner verification before the first Account are the structural defences; rate limits (Section 6.7) the tactical ones. WebFinger makes handles enumerable by design (Section 2.2).
+Free identities attract automated sign-up farms. Per-owner caps (Section 7.6, whose count includes deleted Accounts and in-flight transactions so that deletion or racing does not free capacity) and Owner verification before the first Account are the structural defences; rate limits (Section 6.7) the tactical ones. WebFinger makes handles enumerable by design (Section 2.2). At a Relay accepting any Home Issuer, the cap bounds Agents per (Home Issuer, Owner) only; a party operating its own Issuer is bounded solely by the Relay's per-Home-Issuer policy (Section 8.5).
 
 ### 10.9 Algorithm and Key Confusion
 
@@ -649,17 +664,17 @@ Algorithm confusion [RFC8725] is prevented by pinning `alg` to the key type and 
 
 ### 10.10 Transport, Caching and Clickjacking
 
-The wait, review and Owner approval pages are exactly the pages a clickjacking attack would target, hence `frame-ancestors 'none'` (Section 5.3; Section 4.16 of [RFC9700]); TLS (Section 5) and `no-store` on every response carrying codes, tokens or challenges close the transport and cache channels.
+The wait, review and Owner approval pages are exactly the pages a clickjacking attack would target, hence `frame-ancestors 'none'` (Section 5.3; Section 4.15 of [RFC9700]); TLS (Section 5) and `no-store` on every response carrying codes, tokens or challenges close the transport and cache channels.
 
 ## 11. Privacy Considerations
 
 ### 11.1 Owner Personal Data
 
-The Owner's name and address reach only Registered Clients, only for the `owner_profile` and `owner_email` scopes, and only after the disclosure of Section 6.1 listed them. The Owner's authorisation is expressed either as the `share_owner` permission on the key, which only an Owner Credential can grant, or as an approval under Section 6.6.
+The Owner's name and address reach only Registered Clients, only for the `owner_profile` and `owner_email` scopes, and only after the disclosure of Section 6.1 listed them. The Owner's authorisation is expressed either as the `share_owner` permission on the key, which only an Owner Credential can grant, or as an approval under Section 6.6. At a Relay the Owner's authorisation covers the Relay and, through it, every Relying Party its published policy admits (Section 11.4).
 
 ### 11.2 Correlation across Relying Parties
 
-`sub` and `owner_sub` are `public` subject identifiers: they let Relying Parties recognise the same Agent and the same Owner, which the per-owner cap requires. The cost is that colluding Relying Parties can correlate an Owner's Agents. An Issuer MAY offer `pairwise` subjects as an alternative advertised in `subject_types_supported`; a Relying Party then cannot enforce caps across clients. A Relay's derived `sub` cannot be reversed to the upstream value and differs per Home Issuer.
+`sub` and `owner_sub` are `public` subject identifiers: they let Relying Parties recognise the same Agent and the same Owner, which the per-owner cap requires. The cost is that colluding Relying Parties can correlate an Owner's Agents. This version defines no `pairwise` subjects (Section 2.4). A Relay's derived `sub` cannot be reversed to the upstream value and differs per Home Issuer, but a party holding the upstream value can compute it, so a Home Issuer's Relying Parties and a Relay's can correlate an Agent.
 
 ### 11.3 Discovery Leakage
 
@@ -671,7 +686,7 @@ A Relay sees every Claim of every Agent it relays; Sections 2.4 and 8.5 bound wh
 
 ### 11.5 Retention
 
-Consent Records expire after at most T_CONSENT of non-use; Section 7.4 exposes sign-in history to the Owner; Section 6 forbids logging secrets.
+Consent Records are deleted after T_CONSENT of non-use (Section 6.4); Section 7.4 exposes sign-in history to the Owner; Section 6 forbids logging secrets. Per-owner counts and Account counters are retained after deletion for Section 7.6 and contain no Claims. The Issuer learns which Relying Parties each Agent signs in to and when (Sections 6.4, 7.4); this is inherent to the protocol, and Section 7.4 makes that record visible to the Owner.
 
 ## 12. Conformance
 
@@ -683,7 +698,7 @@ Registrations are provisional until this document has a standards-body home.
 
 ### 13.1 JSON Web Token Claims
 
-This specification requests registration of `actor_type`, `owner_sub`, `owner_name`, `owner_email`, `owner_email_verified`, `owner_verified_via` and `home_iss` in the IANA "JSON Web Token Claims" registry [IANA.JWT.Claims], with this document as the specification document (Section 3.1). The names are not collision-resistant because wire compatibility with a deployed issuer requires them. `accept_disclosure` and `deliver_to_session` are used only in JWTs of type `agent-login+jwt` and are not registered.
+This specification requests registration of `actor_type`, `owner_sub`, `owner_name`, `owner_email`, `owner_email_verified`, `owner_verified_via` and `home_iss` (Section 3.1) and of `accept_disclosure` and `deliver_to_session` (Section 6.3) in the IANA "JSON Web Token Claims" registry [IANA.JWT.Claims], with this document as the specification document. The names are not collision-resistant because wire compatibility with a deployed issuer requires them.
 
 ### 13.2 OAuth Authorization Server Metadata
 
@@ -691,15 +706,19 @@ This specification requests registration of `actor_type`, `owner_sub`, `owner_na
 
 ### 13.3 OAuth Dynamic Client Registration Metadata
 
-`max_signups_per_owner` and `require_review` in the "OAuth Dynamic Client Registration Metadata" registry [IANA.OAuth.Parameters] (Section 4.4).
+`max_signups_per_owner`, `require_review` and `relay_issuer` in the "OAuth Dynamic Client Registration Metadata" registry [IANA.OAuth.Parameters] (Section 4.4).
 
 ### 13.4 OAuth Extensions Error
 
-`signup_limit_reached`, usage location authorization endpoint, in the "OAuth Extensions Error" registry [IANA.OAuth.Parameters] (Section 5.5). Transaction error codes (Section 6.7) are local to the transaction endpoint and are not registered.
+`signup_limit_reached`, usage location authorization code grant error response (Section 11.4.1 of [RFC6749]), protocol extension Agent Login, in the "OAuth Extensions Error" registry [IANA.OAuth.Parameters] (Section 5.5). Transaction error codes (Section 6.7) are local to the transaction endpoint, and `insufficient_permission` (Section 7.8) appears only in a JSON body beside `WWW-Authenticate: Bearer error="insufficient_scope"`; neither is registered.
 
 ### 13.5 Media Types and Link Relation
 
-`application/agent-login+jwt` and `application/agent-login-enrollment+jwt` per [RFC6838] for the `typ` values of Sections 6.3 and 7.2, and the link relation type `agent-login-transaction` per [RFC8288] (Section 5.3).
+`application/agent-login+jwt` and `application/agent-login-enrollment+jwt` per [RFC6838] for the `typ` values of Sections 6.3 and 7.2, and the link relation type `agent-login-transaction` per [RFC8288] (Section 5.3). Registration templates (Section 5.6 of [RFC6838]; Section 2.1.1 of [RFC8288]) will accompany the submission; the media types are intended for the standards tree, which requires IESG approval or a recognised standards organisation (Section 3.1 of [RFC6838]).
+
+### 13.6 Underscored DNS Node Name
+
+`_agentlogin`, RR type TXT, in the "Underscored and Globally Scoped DNS Node Names" registry [RFC8552] (Section 2.3).
 
 ## 14. References
 
@@ -721,7 +740,15 @@ This specification requests registration of `actor_type`, `owner_sub`, `owner_na
 - [RFC7565] Saint-Andre, P., "The 'acct' URI Scheme", RFC 7565, May 2015.
 - [RFC5322] Resnick, P., Ed., "Internet Message Format", RFC 5322, October 2008.
 - [RFC1035] Mockapetris, P., "Domain Names - Implementation and Specification", STD 13, RFC 1035, November 1987.
+- [RFC1123] Braden, R., Ed., "Requirements for Internet Hosts - Application and Support", STD 3, RFC 1123, October 1989.
+- [RFC5890] Klensin, J., "Internationalized Domain Names for Applications (IDNA): Definitions and Document Framework", RFC 5890, August 2010.
+- [RFC5321] Klensin, J., "Simple Mail Transfer Protocol", RFC 5321, October 2008.
+- [RFC4033] Arends, R., Austein, R., Larson, M., Massey, D. and S. Rose, "DNS Security Introduction and Requirements", RFC 4033, March 2005.
+- [RFC4035] Arends, R., Austein, R., Larson, M., Massey, D. and S. Rose, "Protocol Modifications for the DNS Security Extensions", RFC 4035, March 2005.
+- [RFC7208] Kitterman, S., "Sender Policy Framework (SPF) for Authorizing Use of Domains in Email, Version 1", RFC 7208, April 2014.
+- [RFC8552] Crocker, D., "Scoped Interpretation of DNS Resource Records through \"Underscored\" Naming of Attribute Leaves", BCP 222, RFC 8552, March 2019.
 - [RFC6890] Cotton, M., Vegoda, L., Bonica, R., Ed. and B. Haberman, "Special-Purpose IP Address Registries", BCP 153, RFC 6890, April 2013.
+- [RFC8190] Bonica, R., Cotton, M., Haberman, B. and L. Vegoda, "Updates to the Special-Purpose IP Address Registries", BCP 153, RFC 8190, June 2017.
 - [RFC7515] Jones, M., Bradley, J. and N. Sakimura, "JSON Web Signature (JWS)", RFC 7515, May 2015.
 - [RFC7517] Jones, M., "JSON Web Key (JWK)", RFC 7517, May 2015.
 - [RFC7518] Jones, M., "JSON Web Algorithms (JWA)", RFC 7518, May 2015.
@@ -909,6 +936,7 @@ grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA
 HTTP/1.1 200 OK
 Content-Type: application/json
 Cache-Control: no-store
+Pragma: no-cache
 
 {"access_token": "...[omitted for brevity]...", "token_type": "Bearer",
  "expires_in": 600, "scope": "openid email profile",
