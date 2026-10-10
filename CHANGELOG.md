@@ -67,3 +67,7 @@ Inconsistencies the pass surfaced, now resolved:
 - One criterion for version 1.0 (interoperate end to end and pass the checklist), stated in Status and GOVERNANCE.md.
 - Token presentation (`Authorization: Bearer`) is stated once, in the Section 6 introduction.
 
+### Implementation feedback (10 October 2026)
+
+- Section 5.8: a Relying Party that accepts Issuers by discovery may accept an agent-initiated start whose `iss` is the Issuer that discovery for `login_hint` yields; it still sends no request to any other `iss`. Found while building the relying-party kit: the previous text made agent-initiated start impossible under open federation.
+

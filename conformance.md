@@ -72,7 +72,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | R-8 | Uses the Access Token only at UserInfo within its lifetime, verifies UserInfo `sub`, issues its own session; re-checks before lasting actions and treats `401` as revocation | 9 |
 | R-9 | Presents `access_denied` and `signup_limit_reached` distinctly; escapes `error_description`; logs no tokens; separates Owner data | 9 |
 | R-10 | Open Client: metadata document at `client_id`, exact `redirect_uris`, `token_endpoint_auth_method none`; Registered Client requesting `owner_email` publishes `tos_uri` and `policy_uri` | 4.2, 4.3 |
-| R-11 | `initiate_login_uri` accepts only configured `iss` values and performs no fetch otherwise | 5.8 |
+| R-11 | `initiate_login_uri` accepts only a configured `iss` or, under acceptance by discovery, the Issuer that discovery for `login_hint` yields; sends no request to any other `iss` | 5.8 |
 | R-12 | Accepts an Issuer only after verifying that its metadata `issuer` equals the discovered `href` and that every endpoint it names is `https`; applies the 2.2 address, hop, size and identity protections to every request to a discovered endpoint, including Token and UserInfo | 2.2, 10.6 |
 | R-13 | Sends `login_hint` when the expected handle is known (SHOULD); configures a Relay or a Home Issuer it relays, never both; expects `ES256` where its library defaults to `RS256`; `alg` must equal the JWK's `alg` when present; rate-limits unknown-`kid` refetches | 2.4, 5.7, 9 |
 | R-14 | Rejects a token carrying `home_iss` unless `iss` is a configured Relay, whether or not `email` is present; ignores or origin-checks `target_link_uri`; `initiate_login_uri` accepts `GET` and `POST` | 2.5, 5.7, 5.8 |
