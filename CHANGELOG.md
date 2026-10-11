@@ -89,3 +89,9 @@ A review of the reference implementation at commit 9b6dd09 reported twelve defec
 - Section 7.6: the cap counts Agents with an in-flight transaction, not transactions; expired transactions hold no place; check and reservation are atomic; an Account is counted once.
 - Follow-up from re-testing the fixes: a Consent Record is renewed only by a sign-in that reaches `ready` (Section 6.4); a completion that creates an Account is atomic with the cap check (Section 7.6); a discovery result reached through redirects is no fresher than its least fresh hop (Section 2.2).
 
+### Second external review of the reference implementation (11 October 2026)
+
+A second review, at commit 84e5f3f, reported twelve further defects; all were reproduced and fixed there. Two rules that the text implied are now stated:
+
+- Section 7.4: a revocation, disable or deletion prevails over requests processed concurrently with it, and a key enrolled again after its expiry restores nothing the expired record asserted (checklist I-26).
+- Section 9 item 10: whether a Relay relays a Home Issuer is judged by the Relay's current `home_issuers` (checklist R-13).

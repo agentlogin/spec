@@ -33,7 +33,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | I-23 | UserInfo returns `401 invalid_token` for an unexpired Access Token after key revocation or expiry, Agent disable or Account disable; Access Token accepted nowhere else | 3.3, 5.6 |
 | I-24 | Key enrollment: rejects extra JWK members, inconsistent `kty`/`crv`, unsupported curve, off-curve or small-order points, and previously revoked public keys; ignores `permissions`; `pending` key proved only by a proof signed with that key (`typ agent-login-enrollment+jwt`, `kid` = pending key); unproved key deleted after T_ASSERT | 7.2 |
 | I-25 | `share_owner` settable only with an Owner Credential; Delegated Credentials refused with `403 insufficient_permission` on non-delegable operations; every operation checks the credential belongs to the handle's Owner (`404` otherwise) | 7.8 |
-| I-26 | Revocation is immediate: refuses the key, ends open transactions `denied`/`key_revoked`, voids unredeemed codes, invalidates tokens, keeps Consent Records; revoke-all per Agent exists | 7.3, 7.8 |
+| I-26 | Revocation is immediate: refuses the key, ends open transactions `denied`/`key_revoked`, voids unredeemed codes, invalidates tokens, keeps Consent Records; revoke-all per Agent exists; a revocation prevails over an enrollment proof, assertion or Token Request processed concurrently; a key enrolled again after expiry restores no transaction, code or Access Token of its expired record | 7.3, 7.4, 7.8 |
 | I-27 | Account disable ends open and later transactions `denied`/`access_denied`; re-enable preserves counters | 7.4 |
 | I-28 | Per-owner cap counts every Account ever created plus Agents with an in-flight transaction past step 9 (expired ones excluded); check and reservation atomic; concurrent completions for one Account count once | 7.6 |
 | I-29 | Consent revocation deletes only the Consent Record | 7.8 |
@@ -74,7 +74,7 @@ those of its Section 1.5. Version 1.0 requires two independent implementations t
 | R-10 | Open Client: metadata document at `client_id`, exact `redirect_uris`, `token_endpoint_auth_method none`; Registered Client requesting `owner_email` publishes `tos_uri` and `policy_uri` | 4.2, 4.3 |
 | R-11 | `initiate_login_uri` accepts only a configured `iss` or, under acceptance by discovery, the Issuer that discovery for `login_hint` yields; sends no request to any other `iss` | 5.8 |
 | R-12 | Accepts an Issuer only after verifying that its metadata `issuer` equals the discovered `href` and that every endpoint it names is `https`; applies the 2.2 address, hop, size and identity protections to every request to a discovered endpoint, including Token and UserInfo | 2.2, 10.6 |
-| R-13 | Sends `login_hint` when the expected handle is known (SHOULD); configures a Relay or a Home Issuer it relays, never both; expects `ES256` where its library defaults to `RS256`; `alg` must equal the JWK's `alg` when present; rate-limits unknown-`kid` refetches | 2.4, 5.7, 9 |
+| R-13 | Sends `login_hint` when the expected handle is known (SHOULD); configures a Relay or a Home Issuer it relays, never both, judged by the Relay's current `home_issuers`; expects `ES256` where its library defaults to `RS256`; `alg` must equal the JWK's `alg` when present; rate-limits unknown-`kid` refetches | 2.4, 5.7, 9 |
 | R-14 | Rejects a token carrying `home_iss` unless `iss` is a configured Relay, whether or not `email` is present; ignores or origin-checks `target_link_uri`; `initiate_login_uri` accepts `GET` and `POST` | 2.5, 5.7, 5.8 |
 
 ## Agent Client

@@ -532,6 +532,8 @@ An Account is created at the first `completed` transaction for (Agent, `client_i
 | Agent disabled | those it asserted: `denied`, `access_denied` | refused (`unknown_key`) | `invalid_grant` | invalidated (Section 3.3) | unchanged |
 | Agent deleted | as disabled | as disabled | as disabled | as disabled | deleted; the count of Section 7.6 is retained |
 
+An event of this table prevails over requests processed concurrently with it: once it has taken effect, the Issuer MUST NOT issue or honour a transaction, code or Access Token bound to the key, Account or Agent concerned. A key enrolled again after its expiry is a new key record and restores nothing that the expired record asserted.
+
 Consent Records and Accounts belong to the Agent, not to the handle; an Agent created later with the same handle starts with none. Deleting an Owner deletes every Agent of that Owner.
 
 ### 7.5 Owner Verification
@@ -619,7 +621,7 @@ A Relying Party MUST:
 7. Present `access_denied` and `signup_limit_reached` as distinct outcomes, and never render `error_description` without escaping.
 8. Not log ID Tokens or Access Tokens, and store Owner data separately from Agent data.
 9. Perform discovery only for handles presented to it, and cache results per Section 2.2.
-10. To accept Agents from several Issuers, either perform discovery per handle against an allow-list or per-Issuer limits, or configure one Relay (Section 8), but not both a Relay and a Home Issuer it relays, since Section 7.6 would then be counted twice.
+10. To accept Agents from several Issuers, either perform discovery per handle against an allow-list or per-Issuer limits, or configure one Relay (Section 8), but not both a Relay and a Home Issuer it relays, judged by the Relay's current `home_issuers`, since Section 7.6 would then be counted twice.
 
 A Relying Party SHOULD send `login_hint` when the expected handle is known (Section 10.1).
 
