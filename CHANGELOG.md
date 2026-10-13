@@ -10,7 +10,7 @@ The proposal remains subject to the revised working-draft publication process.
   retention that later invalidation cannot restart.
 - Preserve consent scopes only within matching unexpired terms; require authenticated code-replay effects
   and independent Owner approval factors, including enrollment and recovery.
-- Require known-handle binding and exclusive current enrollment per key; use optional JOSE `Ed25519`.
+- Require known-handle binding and exclusive active enrollment per key; use optional JOSE `Ed25519`.
 - Fail stale positive `max_age` requests; keep zero's OIDC fresh-authentication meaning.
 - Bound deleted-Owner quota inheritance by a fixed published retention period; never double-count inheritance.
 - Keep callback validation and ordinary state consumption mandatory; coordination across instances is SHOULD.
@@ -24,6 +24,11 @@ and the AgentID state mapping; restore Relay-registration coverage and compact u
 The bootstrap has no fixed waiting period, and a published zero retention period explicitly ends a deleted
 Owner's quota inheritance immediately. Migration notes describe RP library checks that can reject a delayed
 `max_age=0` flow. Unfinished tooling is preserved on separate archive branches.
+
+Peer-review fixes permit endpoint-appropriate transaction and management credentials while keeping discovery
+document fetches credential-free. Pending enrollments no longer reserve another Agent's public key; active
+exclusivity is enforced only after proof verification. Checklist exceptions and role-specific obligations now
+match the core.
 
 See [migration-0.2.md](migration-0.2.md) for compatibility changes.
 

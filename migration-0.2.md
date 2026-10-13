@@ -8,7 +8,7 @@ exact draft because discovery's `1.0` value does not distinguish working drafts.
 | --- | --- |
 | Optional algorithm | Use JOSE `Ed25519` from RFC 9864 instead of the legacy `EdDSA` identifier. ES256 remains required and the default. Verify library support before advertising Ed25519; do not rewrite a signed header. Existing Ed25519 key material and thumbprints are unchanged. |
 | Known handle | Bind a known expected handle to state and send `login_hint`; reject a conflicting returned handle. This was a SHOULD in draft 0.1. |
-| Current key uniqueness | One current enrollment per public key across an Issuer. Existing duplicates need separate keys or explicit retirement and authorized re-enrollment. |
+| Active key uniqueness | Pending enrollments are Agent-scoped and cannot reserve someone else's public key. Exclusivity is enforced atomically only after proof verification: at most one unexpired active enrollment per public key across an Issuer. Existing active duplicates need separate keys or explicit retirement and authorized re-enrollment. |
 | Lifecycle | Authorization remains bound to immutable Owner, Agent and enrollment identities. Handle reuse, disable/re-enable and key re-enrollment cannot restore old authority. Concurrent acceptance, completion and quota outcomes are indivisible. |
 | Consent | Union scopes only under the same unexpired material metadata; changed terms replace scopes. Unknown prior terms require review. |
 | Replay | Validate client, redirect URI and PKCE before replay side effects. Cross-instance callback consumption is recommended; parameter, session and Issuer validation and ordinary state consumption remain required. |

@@ -12,9 +12,14 @@ handle can be reassigned; a key can acquire a new enrollment after expiry. Captu
 before asynchronous work and check the same identity when applying its effects. The distinction also
 protects delegated management authority from transferring to a replacement Agent.
 
-Constraints can enforce one current enrollment per public key, one Account per Agent/client pair and one
-code per transaction. They complement the authorization checks: a unique code alone does not prove that
+Constraints can enforce one unexpired active enrollment per public key, one Account per Agent/client pair and one
+code per transaction. Scope unproved pending records to their Agent; claim global exclusivity only after proof
+verification, so a caller knowing a public key cannot reserve it against its holder. These constraints complement
+the authorization checks: a unique code alone does not prove that
 its Agent remained enabled or that signup admission succeeded.
+
+Deleting an expired pending challenge also needs a conditional check: the enrollment may have become active
+since it was read. Check that it is still pending when deleting, rather than relying on the earlier status.
 
 Group assertion acceptance with challenge consumption, identity binding, gate decisions and the
 transaction's quota reservation. Group completion with its code, Account changes, count and reservation
