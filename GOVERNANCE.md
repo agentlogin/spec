@@ -19,4 +19,12 @@ hosted providers that implement it, can steer it alone.
 6. **Trademark.** The name "Agent Login" is descriptive and is not claimed as a trademark by any participant.
    Implementations may describe themselves as implementing Agent Login once they pass the conformance checklist.
 
-Initial editors: Samuel Arregger (SentFromAI). A second editor from another organisation is sought before draft 0.2.
+## Working-draft bootstrap
+
+Until two editors and two qualifying implementers from different organisations are available, the listed
+editors may publish 0.x working drafts after an issue, a pull request and at least 14 days of announced public
+review. The publication records the reviewers, unresolved objections and decisions; it does not claim the
+independent approvals otherwise required by items 1 and 2. This exception ends when those participants are
+available, and cannot be used for version 1.0. Item 3's independent interoperability requirement is unchanged.
+
+Initial editors: Samuel Arregger (SentFromAI). A second editor from another organisation is sought.

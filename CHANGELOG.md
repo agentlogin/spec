@@ -1,5 +1,26 @@
 # Changelog
 
+## Draft 0.2 proposal (13 October 2026; not published)
+
+Reduced the proposal to observable protocol rules; moved Relay behavior and its checklist into a companion
+profile and storage, retry, cleanup, restore and audit techniques into an informative implementation guide.
+The proposal remains subject to the revised working-draft publication process.
+
+- Preserve immutable identity binding, concurrent reservation/completion guarantees, effective expiry and
+  retention that later invalidation cannot restart.
+- Preserve consent scopes only within matching unexpired terms; require authenticated code-replay effects
+  and independent Owner approval factors, including enrollment and recovery.
+- Require known-handle binding and exclusive current enrollment per key; use optional JOSE `Ed25519`.
+- Fail stale positive `max_age` requests; keep zero's OIDC fresh-authentication meaning.
+- Bound deleted-Owner quota inheritance by a fixed published retention period; never double-count inheritance.
+- Keep callback validation and ordinary state consumption mandatory; coordination across instances is SHOULD.
+- Separate test coverage from protocol conformance; move fault-injection procedures out of the checklist.
+- Keep read-only link, section-reference and cryptographic-example checks. Shelve the generated inventory,
+  reporting schema and unfinished wire-schema work.
+- Add a limited, public-review bootstrap for 0.x drafts; preserve independent interoperability for 1.0.
+
+See [migration-0.2.md](migration-0.2.md) for compatibility changes.
+
 ## Draft 0.1 (10 October 2026)
 
 First public working draft of Agent Login Core 1.0, the conformance checklist and the AgentID
