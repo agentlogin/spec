@@ -19,6 +19,12 @@ The proposal remains subject to the revised working-draft publication process.
   reporting schema and unfinished wire-schema work.
 - Add a limited, public-review bootstrap for 0.x drafts; preserve independent interoperability for 1.0.
 
+Review corrections: make redirect Issuer comparison explicit; restore discovery and privacy explanations
+and the AgentID state mapping; restore Relay-registration coverage and compact unpublished checklist IDs.
+The bootstrap has no fixed waiting period, and a published zero retention period explicitly ends a deleted
+Owner's quota inheritance immediately. Migration notes describe RP library checks that can reject a delayed
+`max_age=0` flow. Unfinished tooling is preserved on separate archive branches.
+
 See [migration-0.2.md](migration-0.2.md) for compatibility changes.
 
 ## Draft 0.1 (10 October 2026)

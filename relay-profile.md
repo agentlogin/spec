@@ -1,6 +1,6 @@
-# Agent Login Relay Profile — draft 0.2 (proposed)
+# Agent Login Relay Profile - draft 0.2 (proposed)
 
-Proposed companion to [Agent Login Core](agent-login-core.md). Terms, requirements language and parameter names are defined there; “Core” references that document. Relay conformance is separate from direct sign-in.
+Proposed companion to [Agent Login Core](agent-login-core.md). Terms, requirements language and parameter names are defined there; "Core" references that document. Relay conformance is separate from direct sign-in.
 
 ## 1. Purpose
 
@@ -64,7 +64,7 @@ Core's atomic issuance, replay, quota and retention requirements apply. The Rela
 
 ## Conformance Checklist
 
-Section numbers below refer to this profile unless prefixed “Core”. Issuer requirements also apply except for the explicit differences above.
+Section numbers below refer to this profile unless prefixed "Core". Issuer requirements also apply except for the explicit differences above.
 
 | # | Statement | Section |
 | --- | --- | --- |

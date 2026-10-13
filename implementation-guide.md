@@ -87,17 +87,14 @@ only checking that records can be loaded.
 
 ## Adversarial review scenarios
 
-These scenarios supplement boundary tests. Their earlier checklist identifiers are retained for review
-continuity; they are not additional normative requirements.
+These scenarios supplement boundary tests; they are not additional normative requirements.
 
-| Former ID | Suggested schedule and observation |
-| --- | --- |
-| I-50 | Pause enrollment or management after authorization; delete the Agent and recreate its handle under the same or a different Owner. Resume and verify that the old request and Delegated Credential cannot mutate the replacement. |
-| I-51 | Pause proof, update or revocation after reading an enrollment; expire or remove it, create a permitted new enrollment, then resume. Verify that the new enrollment is unaffected. Race enrollment of the same key across different handles. |
-| I-56 | Hold coordination across proof, assertion, transaction or code expiry, including a lock holder that changes no data. Repeat with a confirmed rollback and retry. Verify expiry is checked at the final authorization decision. |
-| I-57 | Lose the connection before and after commit, then restart. Check that reconciliation distinguishes the exact committed operation from a later occupant of its natural key; it never produces a second code, token set, Account or count. |
-| I-62 | Inspect secret storage, logs and backups. Restore a snapshot predating revocation, deletion and consent withdrawal. Verify that recovery does not revive authority or erase counts still within their retention period. |
-| I-63 | Delete expired records while dependent transactions, codes or tokens remain. Check that cleanup preserves the evidence needed for invalidation, replay, terminal retention and quota decisions. |
+- Pause enrollment or management after authorization; delete the Agent and recreate its handle under the same or a different Owner. Resume and verify that the old request and Delegated Credential cannot mutate the replacement.
+- Pause proof, update or revocation after reading an enrollment; expire or remove it, create a permitted new enrollment, then resume. Verify that the new enrollment is unaffected. Race enrollment of the same key across different handles.
+- Hold coordination across proof, assertion, transaction or code expiry, including a lock holder that changes no data. Repeat with a confirmed rollback and retry. Verify expiry is checked at the final authorization decision.
+- Lose the connection before and after commit, then restart. Check that reconciliation distinguishes the exact committed operation from a later occupant of its natural key; it never produces a second code, token set, Account or count.
+- Inspect secret storage, logs and backups. Restore a snapshot predating revocation, deletion and consent withdrawal. Verify that recovery does not revive authority or erase counts still within their retention period.
+- Delete expired records while dependent transactions, codes or tokens remain. Check that cleanup preserves the evidence needed for invalidation, replay, terminal retention and quota decisions.
 
 Other useful schedules cover duplicate assertions under cap one; two transactions for one Agent with one
 expiring; completion racing disable and re-enable; and revocation after a transaction's retention ends.

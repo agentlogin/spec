@@ -1,4 +1,4 @@
-# Agent Login conformance checklist — draft 0.2 proposal
+# Agent Login conformance checklist - draft 0.2 proposal
 
 This checklist accompanies [Agent Login Core](agent-login-core.md). Section numbers refer to the core;
 constants are defined in Section 1.5. The core's normative language controls. A checklist item cannot
@@ -17,8 +17,7 @@ report supports a conformance claim only to the extent of the behaviour it exerc
 remains visible alongside the results rather than being counted as passing.
 
 This checklist covers observable protocol behaviour. [Implementation guidance](implementation-guide.md)
-contains additional fault-injection, storage, recovery and audit scenarios. IDs I-50, I-51, I-56, I-57,
-I-62 and I-63 are retained there for continuity and are not checklist items in this revision.
+contains additional fault-injection, storage, recovery and audit scenarios.
 
 ## Issuer
 
@@ -48,10 +47,10 @@ I-62 and I-63 are retained there for continuity and are not checklist items in t
 | I-22 | Owner Claims only to Registered Clients and only with `owner_verified_via`; never a token missing a requested Owner Claim: a request that cannot be satisfied ends `denied`/`access_denied`; no Agent signs in before its Owner is verified | 3.1, 6.6, 7.5 |
 | I-23 | UserInfo returns `401 invalid_token` for an unexpired Access Token after key revocation or expiry, Agent disable or Account disable; Access Token accepted nowhere else | 3.3, 5.6 |
 | I-24 | Key enrollment: rejects extra JWK members, inconsistent `kty`/`crv`, unsupported curve, off-curve or small-order points, and previously revoked public keys; ignores `permissions`; `pending` key proved only by a proof signed with that key (`typ agent-login-enrollment+jwt`, `kid` = pending key); unproved key deleted after T_ASSERT | 7.2 |
-| I-25 | `share_owner` settable only with an Owner Credential; Delegated Credentials refused with `403 insufficient_permission` on non-delegable operations; a stale Delegated Credential or in-flight request cannot manage a replacement with the same handle, and every operation checks the handle’s Owner (`404` otherwise) | 7.8 |
+| I-25 | `share_owner` settable only with an Owner Credential; Delegated Credentials refused with `403 insufficient_permission` on non-delegable operations; a stale Delegated Credential or in-flight request cannot manage a replacement with the same handle, and every operation checks the handle's Owner (`404` otherwise) | 7.8 |
 | I-26 | Revocation is immediate: refuses the key, ends open transactions `denied`/`key_revoked`, voids unredeemed codes, invalidates tokens, keeps Consent Records; revoke-all per Agent exists; after a revocation takes effect, every later authorisation decision refuses the invalidated authority, including a proof, assertion or Token Request already in flight; a key enrolled again after expiry restores no transaction, code or Access Token of its expired record | 7.3, 7.4, 7.8 |
 | I-27 | Account disable ends open transactions `denied`/`access_denied` and refuses later transactions while disabled; re-enable preserves counters and restores only fresh sign-ins | 7.4 |
-| I-28 | Per-owner cap counts completed Accounts and distinct Agents with a live transaction past step 9; another transaction for an already-counted Agent adds no place. Concurrent first sign-ins count once; deleting an Account or Agent does not release its place. Reverification within the fixed, published period after Owner deletion inherits counts, not authority; after that period the email linkage is forgotten | 7.6 |
+| I-28 | Per-owner cap counts completed Accounts and distinct Agents with a live transaction past step 9; another transaction for an already-counted Agent adds no place. Concurrent first sign-ins count once; deleting an Account or Agent does not release its place. Reverification within the fixed, published period after Owner deletion inherits counts, not authority; after that period the email linkage is forgotten. A published period of zero ends quota inheritance immediately on deletion | 7.6 |
 | I-29 | Consent revocation deletes only the Consent Record | 7.8 |
 | I-30 | JWK Set keys carry stable `kid`, `use`, `alg`; rotation keeps the previous key for T_TOKEN plus the cache lifetime after its last issuance, except that compromised keys cease signing and are removed immediately | 7.7 |
 | I-31 | Rate limiting transactions and invalid assertions is SHOULD. When rate limiting occurs, `429` with `Retry-After` is mandatory | 6.7 |
@@ -71,16 +70,16 @@ I-62 and I-63 are retained there for continuity and are not checklist items in t
 | I-45 | Owner approval accepted only when the session satisfies Section 6.6 independently of the method label, including the independence of provisioning and recovery; an email code or link alone cannot approve; the approval page names a Relay client as such | 6.6, 7.5 |
 | I-46 | `DELETE .../keys` revokes `pending` and `active` keys and, with an Owner Credential, every Delegated Credential for the handle; a disabled Agent cannot assert, exchange a code or use UserInfo; Consent Records and Accounts do not survive to a re-created handle | 7.3, 7.4 |
 | I-47 | Delegated Credential: `404` for any other handle of the same Owner; `403` `insufficient_permission` with `WWW-Authenticate: Bearer error="insufficient_scope"` and no change for `permissions` or for `status` `enabled`; `disabled` permitted | 7.8 |
-| I-48 | Enrollment rejects non-canonical coordinates, a key already enrolled anywhere at the Issuer, and a key revoked for the handle, comparing decoded points; expiry permits a new enrollment without restoring the old enrollment’s authority; `id_token_signed_response_alg` other than offered values rejected | 3.2, 4.3, 7.2 |
+| I-48 | Enrollment rejects non-canonical coordinates, a key already enrolled anywhere at the Issuer, and a key revoked for the handle, comparing decoded points; expiry permits a new enrollment without restoring the old enrollment's authority; `relay_issuer` registrations require every redirect URI's host, including any port, to equal the Relay Issuer Identifier's host; `id_token_signed_response_alg` other than offered values rejected | 3.2, 4.3, 4.4, 7.2 |
 | I-49 | Every response of Sections 5 to 7 including redirects, except the JWK Set, carries `Cache-Control: no-store`; the Token Response also `Pragma: no-cache`; CORS responses never set `Access-Control-Allow-Credentials: true`; ID Token carries `auth_time` when `max_age` was sent | 3.1, 5, 6 |
-| I-52 | With cap one, a losing duplicate assertion does not let a second Agent pass admission. Multiple live transactions for one Agent occupy one place; ending one does not release the place while another remains live | 6.3, 7.6 |
-| I-53 | Concurrent completion and lifecycle invalidation cannot produce a usable code without its completed transaction and Account count. After disable, re-enable permits only fresh sign-ins; response delivery order does not determine when invalidation took effect | 5.6, 6.5, 7.4, 7.6 |
-| I-54 | Polling reports effective expiry without changing security state. Later revocation, disable or re-enrollment cannot replace an earlier terminal outcome, restart retention or make an unreadable transaction readable again; equal key and transaction deadlines resolve as Section 6.2 specifies | 6.2, 6.7, 7.4 |
-| I-55 | Accept `owner_email` under material terms A, change to B and accept only `openid`: a later `owner_email` request under B requires review. Scope union is permitted only under the same material terms, including absent versus present metadata | 6.4 |
-| I-58 | A replay with incorrect client, redirect or PKCE binding cannot invalidate the legitimate holder’s tokens. A replay with valid bindings returns `invalid_grant`; revoking its previously issued tokens is SHOULD | 5.4, 5.6 |
-| I-59 | A mailbox-only upstream sign-in or a passkey provisioned or recovered solely through an Agent-readable channel cannot approve or grant `share_owner`; `owner_verified_via` alone does not authorise approval | 6.6, 7.5, 7.8 |
-| I-60 | Rejects a registration missing required `token_endpoint_auth_method`; enforces the conditional metadata requirements of each supported client authentication method | 2.4, 4.3 |
-| I-61 | Publishes a new signing key before first use, retains the previous key for the required overlap, never reuses a `kid` for other key material, and removes a suspected compromised key | 7.7 |
+| I-50 | With cap one, a losing duplicate assertion does not let a second Agent pass admission. Multiple live transactions for one Agent occupy one place; ending one does not release the place while another remains live | 6.3, 7.6 |
+| I-51 | Concurrent completion and lifecycle invalidation cannot produce a usable code without its completed transaction and Account count. After disable, re-enable permits only fresh sign-ins; response delivery order does not determine when invalidation took effect | 5.6, 6.5, 7.4, 7.6 |
+| I-52 | Polling reports effective expiry without changing security state. Later revocation, disable or re-enrollment cannot replace an earlier terminal outcome, restart retention or make an unreadable transaction readable again; equal key and transaction deadlines resolve as Section 6.2 specifies | 6.2, 6.7, 7.4 |
+| I-53 | Accept `owner_email` under material terms A, change to B and accept only `openid`: a later `owner_email` request under B requires review. Scope union is permitted only under the same material terms, including absent versus present metadata | 6.4 |
+| I-54 | A replay with incorrect client, redirect or PKCE binding cannot invalidate the legitimate holder's tokens. A replay with valid bindings returns `invalid_grant`; revoking its previously issued tokens is SHOULD | 5.4, 5.6 |
+| I-55 | A mailbox-only upstream sign-in or a passkey provisioned or recovered solely through an Agent-readable channel cannot approve or grant `share_owner`; `owner_verified_via` alone does not authorise approval | 6.6, 7.5, 7.8 |
+| I-56 | Rejects a registration missing required `token_endpoint_auth_method`; enforces the conditional metadata requirements of each supported client authentication method | 2.4, 4.3 |
+| I-57 | Publishes a new signing key before first use, retains the previous key for the required overlap, never reuses a `kid` for other key material, and removes a suspected compromised key | 7.7 |
 
 ## Relying Party
 

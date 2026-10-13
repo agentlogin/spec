@@ -22,9 +22,10 @@ hosted providers that implement it, can steer it alone.
 ## Working-draft bootstrap
 
 Until two editors and two qualifying implementers from different organisations are available, the listed
-editors may publish 0.x working drafts after an issue, a pull request and at least 14 days of announced public
-review. The publication records the reviewers, unresolved objections and decisions; it does not claim the
-independent approvals otherwise required by items 1 and 2. This exception ends when those participants are
-available, and cannot be used for version 1.0. Item 3's independent interoperability requirement is unchanged.
+editors may publish 0.x working drafts after a public issue, a pull request and a recorded public review
+process, with no fixed waiting period. The publication records the reviewers, unresolved objections and
+decisions; it does not claim the independent approvals otherwise required by items 1 and 2. This exception
+ends when those participants are available, and cannot be used for version 1.0. Item 3's independent
+interoperability requirement is unchanged.
 
 Initial editors: Samuel Arregger (SentFromAI). A second editor from another organisation is sought.

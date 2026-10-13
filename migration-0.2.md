@@ -14,9 +14,15 @@ exact draft because discovery's `1.0` value does not distinguish working drafts.
 | Replay | Validate client, redirect URI and PKCE before replay side effects. Cross-instance callback consumption is recommended; parameter, session and Issuer validation and ordinary state consumption remain required. |
 | Owner approval | Every approval method needs an Agent-inaccessible factor, including its provisioning and recovery paths. An authentication-method label alone does not establish this. |
 | Authentication age | Positive `max_age` is checked at code authorization, token issuance and RP validation. Late approval cannot refresh `auth_time`: the flow fails with `login_required` before code issuance or `invalid_grant` at the Token Endpoint. Zero requests a fresh assertion for this request, following OIDC; it is not a zero-length network window. |
-| Deleted-Owner counts | Lifetime counting holds while an Owner exists; afterward the Issuer's fixed published retention period applies. Re-verification during it inherits counts without authority; after expiry it does not. Inherited counts are not counted twice or erased from a live Owner when an older retention record expires. |
+| Deleted-Owner counts | Lifetime counting holds while an Owner exists; afterward the Issuer's fixed published retention period applies. Zero ends that Owner's quota inheritance immediately on deletion. Re-verification during a positive period inherits counts without authority; after expiry it does not. Inherited counts are not counted twice or erased from a live Owner when an older retention record expires. |
 | Relay | The profile and its checklist are now [separate](relay-profile.md). Relay sign-in without `email` needs a pre-bound `login_hint`. Claims, Owner waits and live-state failures have explicit rules. Relay counting remains limited to upstream Owner identifiers, not undisclosed email history. |
 | Signing-key caches | Observe HTTP freshness and T_CACHE; a failed refresh cannot extend validity. Removing a compromised key cannot immediately invalidate cached copies. |
+
+Some OIDC libraries configured to validate `max_age=0` also require `auth_time` to be within their clock
+tolerance of the current time. An Owner wait longer than that tolerance can therefore fail at the RP even
+though the assertion was fresh for this request. For example, `openid-client` 6.8.8 with `oauth4webapi` 3.8.8
+applies this check when `maxAge: 0` or `default_max_age: 0` is configured, with a default tolerance of 30 seconds.
+Applications need to handle that failed sign-in; approval must not manufacture a newer `auth_time`.
 
 Address comparison for retained quota linkage preserves parsed local-part octets and lowercases the A-label
 domain. Provider alias rules are not inferred. Address changes retain existing counts and inherit applicable

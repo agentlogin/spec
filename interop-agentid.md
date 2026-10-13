@@ -6,7 +6,7 @@ relying-party surface wire-compatible so that an application can accept both wit
 sharing one account model keyed on (`iss`, `sub`), and so that an AgentID-enabled application needs only
 configuration to add an Agent Login issuer.
 
-Rows marked (observed) were verified against the live service on 9–10 October 2026 for one unregistered client
+Rows marked (observed) were verified against the live service on 9-10 October 2026 for one unregistered client
 requesting `openid email profile`; rows marked (docs) are taken from AgentMail's documentation and were not
 exercised. Registered clients and Owner Claims were not tested. Evidence: the research log in the
 `agentid-research` folder of the reference repository.
@@ -16,7 +16,7 @@ exercised. Registered clients and Owner Claims were not tested. Evidence: the re
 | Aspect | AgentID | Agent Login |
 | --- | --- | --- |
 | Flow | OIDC authorization code, PKCE S256 mandatory for unregistered clients (observed) | Same, PKCE for every client |
-| Signature | ES256, one key in JWKS at `jwks_uri` (observed); stable `kid`s with overlap (docs) | Same (ES256 REQUIRED; EdDSA OPTIONAL) |
+| Signature | ES256, one key in JWKS at `jwks_uri` (observed); stable `kid`s with overlap (docs) | Same (ES256 REQUIRED; Ed25519 OPTIONAL) |
 | Token lifetime | id_token and access token 600 s, single-use code (observed); code lifetime 60 s (docs); no refresh (discovery) | Same |
 | `authorization_response_iss_parameter_supported` | true (observed) | REQUIRED |
 | Claims | `actor_type`, `sub`, `email`, `email_verified`, `name`, `preferred_username`, `owner_sub` (observed); `owner_name`, `owner_email`, `owner_email_verified` (docs, registered clients) | Same names and semantics, plus `home_iss`, `owner_verified_via`; `scope` always present |
@@ -48,6 +48,20 @@ exercised. Registered clients and Owner Claims were not tested. Evidence: the re
 6. The handle-to-Issuer binding of Section 2.5 of the core specification applies to the Agent Login connection only; an AgentID token for `x@agentmail.to` is accepted by issuer configuration.
 
 ## Mapping for an Agent Login client talking to AgentID
+
+State mapping from AgentID's wait-page script as inspected on 9 and 10 October 2026;
+`needs_enrollment`, `pending`, `activated`, `authenticated`, `reviewing_disclosure` and `ready`
+were also observed live for the unregistered client described above. The other mappings are based on the script.
+
+| AgentID value | Agent Login |
+| --- | --- |
+| `needs_enrollment`, `pending`, `activated`, `authenticated` | `awaiting_agent` and the assertion of core Section 6.3 |
+| `reviewing_disclosure`, `consent_required` | `awaiting_consent` |
+| `ready` | `ready` |
+| `restart_required` | `expired` |
+| `signup_limit_reached` | `denied`, `reason` `signup_limit_reached` |
+| `denied` | `denied` |
+| `consent_reason` `first_visit`, `material_change`, `expired`, `prompt_consent` | same values |
 
 An agent client MAY implement an AgentID adapter: start the transaction at the application as usual, read the
 22-character `auth_token` displayed on the AgentID wait page (`/v0/authorize/wait?jti=...`), approve with the
