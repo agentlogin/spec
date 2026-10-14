@@ -28,7 +28,7 @@ Owner's quota inheritance immediately. Migration notes describe RP library check
 Peer-review fixes permit endpoint-appropriate transaction and management credentials while keeping discovery
 document fetches credential-free. Pending enrollments no longer reserve another Agent's public key; active
 exclusivity is enforced only after proof verification. Checklist exceptions and role-specific obligations now
-match the core.
+match the core, including optional `next.method` and `next.url` when `action` is `none`.
 
 See [migration-0.2.md](migration-0.2.md) for compatibility changes.
 
