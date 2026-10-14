@@ -418,6 +418,8 @@ Every Transaction Resource and JSON transaction-error response for an existing t
 - `transaction_token`: present only in the response to a successful assertion (Section 6.3) or, at a Relay, as [Relay Profile], Section 4 describes.
 - `session_token`: present only in the JSON `200` response of Section 5.3; valid until T_RETAIN after the transaction becomes terminal.
 
+The resource `url` and any `next.url` for an action other than `none` MUST be under the discovered `transaction_endpoint`: the same origin and, after URL normalisation, its path (ignoring a trailing slash) or a descendant at a `/` boundary, without userinfo or a fragment. Agent Clients MUST verify this before sending transaction credentials. A Relay's `follow` URL is instead checked against the discovered Home Issuer's `transaction_endpoint` ([Relay Profile], Section 4). No secret encoding, position within the URL, or URL stability is prescribed.
+
 Members not understood MUST be ignored.
 
 ### 6.2 Statuses and Next Steps
