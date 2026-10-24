@@ -1,4 +1,4 @@
-# Agent Login conformance checklist - draft 0.2 proposal
+# Agent Login conformance checklist - working draft 0.2
 
 This checklist accompanies [Agent Login Core](agent-login-core.md). Section numbers refer to the core;
 constants are defined in Section 1.5. The core's normative language controls. A checklist item cannot

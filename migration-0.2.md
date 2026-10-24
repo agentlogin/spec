@@ -1,8 +1,8 @@
-# Draft 0.2 migration notes (proposed)
+# Working draft 0.2 migration notes
 
-This is an unapproved working-draft revision. Draft 0.1 remains in Git history; deployments need to pin the
-exact draft because discovery's `1.0` value does not distinguish working drafts. Publication follows
-[GOVERNANCE.md](GOVERNANCE.md), including its limited bootstrap process.
+Draft 0.1 remains in Git history; deployments need to pin the exact draft because discovery's `1.0` value
+does not distinguish working drafts. The [publication record](publication-0.2.md) documents the limited
+bootstrap process in [GOVERNANCE.md](GOVERNANCE.md). This is not final version 1.0.
 
 | Change | Effect on implementations |
 | --- | --- |

@@ -11,11 +11,11 @@ a plain HTTP client can complete a sign-in without a browser. Changing issuer ch
 
 | Document | Status |
 | --- | --- |
-| [Agent Login Core 1.0, draft 0.2 proposal](agent-login-core.md) | Proposed; not approved for publication |
+| [Agent Login Core 1.0, working draft 0.2](agent-login-core.md) | Working draft |
 | [Conformance checklist](conformance.md) | Working draft |
-| [Relay profile](relay-profile.md) | Proposed companion specification |
+| [Relay profile](relay-profile.md) | Companion working draft |
 | [Implementation guide](implementation-guide.md) | Informative |
-| [Draft 0.2 migration notes](migration-0.2.md) | Proposed compatibility changes |
+| [Draft 0.2 migration notes](migration-0.2.md) | Compatibility guidance |
 | [AgentID interoperability notes](interop-agentid.md) | Informative |
 
 ## Reference implementation
@@ -27,8 +27,9 @@ they do not establish complete protocol conformance or independent interoperabil
 
 ## Status of this work
 
-Draft 0.1 remains the published baseline in Git history. The files in this revision prepare draft 0.2 for review;
-they do not assert that the editors or independent implementers have approved it. Nothing here is final.
+Working draft 0.2 is published under the limited bootstrap in [GOVERNANCE.md](GOVERNANCE.md).
+The [publication record](publication-0.2.md) identifies its review scope, decisions and unresolved limitations.
+Draft 0.1 remains in Git history. Nothing here is final, and independent implementer approval is not claimed.
 Breaking changes are expected until two independent interoperable implementations exist (see
 [GOVERNANCE.md](GOVERNANCE.md)). The working-draft bootstrap process does not waive the independent
 interoperability requirement for 1.0.

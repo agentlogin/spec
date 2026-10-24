@@ -1,9 +1,9 @@
-# Agent Login Core 1.0 - draft 0.2 (proposed)
+# Agent Login Core 1.0 - working draft 0.2
 
 | | |
 | --- | --- |
-| Status | Proposed Working Draft; not approved for publication |
-| Date | 13 October 2026 |
+| Status | Working Draft |
+| Date | 24 October 2026 |
 | Editors | S. Arregger (SentFromAI); second editor sought, see GOVERNANCE.md |
 | Repository | https://github.com/agentlogin/spec |
 
@@ -13,7 +13,7 @@ Agent Login is a profile of OpenID Connect for signing software agents in to web
 
 ## Status of This Document
 
-This is proposed working draft 0.2, prepared for implementer review under [GOVERNANCE.md](GOVERNANCE.md). Behaviour MAY change between drafts. Version 1.0 requires two independent implementations that interoperate end to end and pass the applicable conformance checklist. Feedback is collected in the repository issue tracker. The editors intend to submit this document as an Internet-Draft. This proposal makes no claim of completed independent review or implementation conformance.
+This is working draft 0.2, published under the bootstrap process in [GOVERNANCE.md](GOVERNANCE.md); see the [publication record](publication-0.2.md). Behaviour MAY change between drafts. Version 1.0 requires two independent implementations that interoperate end to end and pass the applicable conformance checklist. Feedback is collected in the repository issue tracker. The editors intend to submit this document as an Internet-Draft. Publication makes no claim of completed independent implementer review or implementation conformance.
 
 ## Copyright and Licence
 
@@ -793,7 +793,7 @@ Registrations are provisional until this document has a standards-body home; eac
 - [IndieAuth] Parecki, A., Ed., "IndieAuth", W3C Note and living standard.
 - [WebAuthn] Hodges, J., Jones, J.C., Jones, M.B., Kumar, A. and E. Lundberg, "Web Authentication: An API for accessing Public Key Credentials, Level 2", W3C Recommendation, April 2021.
 - [AgentID.Docs] AgentMail, Inc., "AgentID documentation", https://www.agentid.com/docs and https://docs.agentmail.to/agentid-sign-in, retrieved 9-10 October 2026.
-- [Relay Profile] Agent Login editors, [Agent Login Relay Profile](relay-profile.md), draft 0.2 proposed, October 2026.
+- [Relay Profile] Agent Login editors, [Agent Login Relay Profile](relay-profile.md), working draft 0.2, October 2026.
 - [Implementation Guide] Agent Login editors, [Implementation Guide](implementation-guide.md), informative, October 2026.
 - [AgentID.Interop] Agent Login editors, "AgentID interoperability notes", interop-agentid.md in this repository, October 2026.
 

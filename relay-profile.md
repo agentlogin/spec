@@ -1,6 +1,6 @@
-# Agent Login Relay Profile - draft 0.2 (proposed)
+# Agent Login Relay Profile - working draft 0.2
 
-Proposed companion to [Agent Login Core](agent-login-core.md). Terms, requirements language and parameter names are defined there; "Core" references that document. Relay conformance is separate from direct sign-in.
+Companion working draft to [Agent Login Core](agent-login-core.md). Terms, requirements language and parameter names are defined there; "Core" references that document. Relay conformance is separate from direct sign-in.
 
 ## 1. Purpose
 

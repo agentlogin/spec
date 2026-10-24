@@ -1,10 +1,12 @@
 # Changelog
 
-## Draft 0.2 proposal (13 October 2026; not published)
+## Working draft 0.2 (24 October 2026)
 
 Reduced the proposal to observable protocol rules; moved Relay behavior and its checklist into a companion
 profile and storage, retry, cleanup, restore and audit techniques into an informative implementation guide.
-The proposal remains subject to the revised working-draft publication process.
+Published under the limited working-draft bootstrap; see the [publication record](publication-0.2.md).
+The publication edits change status, date and review documentation, not the protocol rules at revision
+`a000e29c7af91d3fd8a5a4ad6241e2b10aabcc78`.
 
 - Preserve immutable identity binding, concurrent reservation/completion guarantees, effective expiry and
   retention that later invalidation cannot restart.
