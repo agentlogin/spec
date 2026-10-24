@@ -1,5 +1,41 @@
 # Changelog
 
+## Working draft 0.2 (24 October 2026)
+
+Reduced the proposal to observable protocol rules; moved Relay behavior and its checklist into a companion
+profile and storage, retry, cleanup, restore and audit techniques into an informative implementation guide.
+Published under the limited working-draft bootstrap; see the [publication record](publication-0.2.md).
+The publication edits change status, date and review documentation, not the protocol rules at revision
+`a000e29c7af91d3fd8a5a4ad6241e2b10aabcc78`.
+
+- Preserve immutable identity binding, concurrent reservation/completion guarantees, effective expiry and
+  retention that later invalidation cannot restart.
+- Preserve consent scopes only within matching unexpired terms; require authenticated code-replay effects
+  and independent Owner approval factors, including enrollment and recovery.
+- Require known-handle binding and exclusive active enrollment per key; use optional JOSE `Ed25519`.
+- Fail stale positive `max_age` requests; keep zero's OIDC fresh-authentication meaning.
+- Bound deleted-Owner quota inheritance by a fixed published retention period; never double-count inheritance.
+- Keep callback validation and ordinary state consumption mandatory; coordination across instances is SHOULD.
+- Separate test coverage from protocol conformance; move fault-injection procedures out of the checklist.
+- Keep read-only link, section-reference and cryptographic-example checks. Shelve the generated inventory,
+  reporting schema and unfinished wire-schema work.
+- Add a limited, public-review bootstrap for 0.x drafts; preserve independent interoperability for 1.0.
+
+Review corrections: make redirect Issuer comparison explicit; restore discovery and privacy explanations
+and the AgentID state mapping; restore Relay-registration coverage and compact unpublished checklist IDs.
+The bootstrap has no fixed waiting period, and a published zero retention period explicitly ends a deleted
+Owner's quota inheritance immediately. Migration notes describe RP library checks that can reject a delayed
+`max_age=0` flow. Unfinished tooling is preserved on separate archive branches.
+
+Peer-review fixes permit endpoint-appropriate transaction and management credentials while keeping discovery
+document fetches credential-free. Pending enrollments no longer reserve another Agent's public key; active
+exclusivity is enforced only after proof verification. Checklist exceptions and role-specific obligations now
+match the core, including optional `next.method` and `next.url` when `action` is `none`. The transaction URL
+boundary is explicit for resource and actionable next-step URLs, including Relay hand-off; secret layout and
+URL rotation remain implementation choices.
+
+See [migration-0.2.md](migration-0.2.md) for compatibility changes.
+
 ## Draft 0.1 (10 October 2026)
 
 First public working draft of Agent Login Core 1.0, the conformance checklist and the AgentID

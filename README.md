@@ -5,25 +5,41 @@
 An agent is identified by a handle that looks like an email address, `bot@acme.com`. The domain decides which
 sign-in server (issuer) vouches for its agents. Applications accept the sign-in with the same OpenID Connect
 machinery they already use for "Sign in with Google", and receive a signed token naming the agent and the human
-owner on record. Any domain can run an issuer; agents keep their handle when they move; a plain HTTP client can
-complete a sign-in without a browser.
+owner on record. Any domain can run an issuer; a domain can change its issuer while retaining its handles;
+a plain HTTP client can complete a sign-in without a browser. Changing issuer changes the application's
+`(iss, sub)` identity: transferring existing application accounts is outside this specification.
 
 | Document | Status |
 | --- | --- |
-| [Agent Login Core 1.0, draft 0.1](agent-login-core.md) | Working draft |
+| [Agent Login Core 1.0, working draft 0.2](agent-login-core.md) | Working draft |
 | [Conformance checklist](conformance.md) | Working draft |
+| [Relay profile](relay-profile.md) | Companion working draft |
+| [Implementation guide](implementation-guide.md) | Informative |
+| [Draft 0.2 migration notes](migration-0.2.md) | Compatibility guidance |
 | [AgentID interoperability notes](interop-agentid.md) | Informative |
 
 ## Reference implementation
 
-[agentlogin/reference](https://github.com/agentlogin/reference) (Apache-2.0) follows this draft: an issuer, a
-conformance harness that runs the checklist against any issuer, an agent client and command line, a relying-party
-kit, and an example application.
+[agentlogin/reference](https://github.com/agentlogin/reference) (Apache-2.0) accompanies this work: an issuer, a
+conformance harness that exercises part of the checklist, an agent client and command line, a relying-party
+kit, and an example application. Its unit tests, storage adapters and harness results are useful evidence;
+they do not establish complete protocol conformance or independent interoperability.
 
 ## Status of this work
 
-Draft 0.1 is a working draft published for implementer review. Nothing here is final. Breaking changes are
-expected until two independent interoperable implementations exist (see [GOVERNANCE.md](GOVERNANCE.md)).
+Working draft 0.2 is published under the limited bootstrap in [GOVERNANCE.md](GOVERNANCE.md).
+The [publication record](publication-0.2.md) identifies its review scope, decisions and unresolved limitations.
+Draft 0.1 remains in Git history. Nothing here is final, and independent implementer approval is not claimed.
+Breaking changes are expected until two independent interoperable implementations exist (see
+[GOVERNANCE.md](GOVERNANCE.md)). The working-draft bootstrap process does not waive the independent
+interoperability requirement for 1.0.
+
+## Check the specification
+
+With Node.js 22 or later, run `node scripts/check-spec.mjs`. It checks checklist section references, local
+links and the printed signatures, claims, thumbprint and PKCE example. It writes no files and certifies no
+implementation. Review behavioral changes against the [checklist](conformance.md); storage and fault-injection
+techniques are in the [informative guide](implementation-guide.md).
 
 ## Participate
 
